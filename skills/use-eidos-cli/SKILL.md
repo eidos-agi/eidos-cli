@@ -1,11 +1,22 @@
 ---
 name: use-eidos-cli
-description: Use when the user asks about Eidos, Eidos AGI, platform status, gateway routing, vault/secrets, or which Eidos AGI specialist system should handle a task. This skill tells Codex to call the installed `eidos` CLI first and then route to the appropriate Eidos AGI plugin or CLI.
+description: Use when the user asks about Eidos, Eidos AGI, platform status, gateway routing, vault/secrets, or which Eidos AGI specialist system should handle a task. This skill tells Codex to call the installed `eidos` CLI first; MCP and plugins should only point to CLIs, while CLIs provide progressive reveal of the deeper tool graph.
 ---
 
 # Use Eidos CLI
 
 Use the installed `eidos` CLI as the first stop for Eidos AGI platform questions. Eidos is the gateway layer: it should orient Codex before Codex reaches for specialist tools.
+
+## Architecture Principle
+
+Get away from giant MCP tool surfaces. Use MCP and Codex plugins as small signposts that point to local CLIs. The CLIs are the real progressive-reveal interface: `--help`, subcommands, `doctor`, `status`, `list`, `find`, `ask`, and domain-specific commands can expose thousands of tools without loading all of them into Codex at once.
+
+In practice:
+
+- Start with `eidos --help`, `eidos status`, or `eidos health`.
+- Let Eidos identify the relevant domain or specialist.
+- Run that specialist CLI's smallest useful command.
+- Only use MCP when it is the pointer or bridge to a CLI, not as the primary place to model every capability.
 
 ## Primary Rule
 
@@ -35,7 +46,7 @@ After Eidos gives the operating picture, route to the specialist surface that ow
 - Use Forge-Forge for forge discovery, forge patterns, registry lookups, and creating new domain forges.
 - Use Eidos Vault for secret paths, API key status, and platform credentials when a task explicitly requires them.
 
-Prefer the specialist CLI or plugin after routing. Do not duplicate its domain logic inside Codex.
+Prefer the specialist CLI after routing. A plugin or MCP shim may help Codex discover or call the CLI, but the CLI should own the domain logic and deeper tool reveal.
 
 ## Vault And Secrets Boundary
 

@@ -1,7 +1,7 @@
 {
   "name": "eidos",
   "version": "0.1.0",
-  "description": "Use the live Eidos CLI as the gateway into the Eidos AGI platform and its specialist systems.",
+  "description": "Use the live Eidos CLI as the progressive-reveal gateway into Eidos AGI systems.",
   "author": {
     "name": "Eidos AGI",
     "email": "TODO@example.com",
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "Eidos",
     "shortDescription": "Use Eidos as the gateway into Eidos AGI systems.",
-    "longDescription": "Eidos is the gateway Codex plugin for Eidos AGI. It routes broad Eidos questions to the installed Eidos CLI first, then helps Codex discover and use the right specialist surface such as Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Eidos Vault.",
+    "longDescription": "Eidos is the gateway Codex plugin for Eidos AGI. It keeps Codex out of giant MCP surfaces by pointing first to the installed Eidos CLI, where broad platform questions can progressively reveal the right specialist CLI such as Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Eidos Vault.",
     "developerName": "Eidos AGI",
     "category": "Productivity",
     "capabilities": [
