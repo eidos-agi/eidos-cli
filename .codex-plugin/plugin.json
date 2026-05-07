@@ -1,0 +1,45 @@
+{
+  "name": "eidos",
+  "version": "0.1.0",
+  "description": "Use the live Eidos CLI as the gateway into the Eidos AGI platform and its specialist systems.",
+  "author": {
+    "name": "Eidos AGI",
+    "email": "TODO@example.com",
+    "url": "https://github.com/eidos-agi"
+  },
+  "homepage": "https://github.com/eidos-agi/eidos-cli",
+  "repository": "https://github.com/eidos-agi/eidos-cli",
+  "license": "MIT",
+  "keywords": [
+    "eidos",
+    "cli",
+    "gateway",
+    "platform",
+    "vault",
+    "routing",
+    "eidos-agi"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Eidos",
+    "shortDescription": "Use Eidos as the gateway into Eidos AGI systems.",
+    "longDescription": "Eidos is the gateway Codex plugin for Eidos AGI. It routes broad Eidos questions to the installed Eidos CLI first, then helps Codex discover and use the right specialist surface such as Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Eidos Vault.",
+    "developerName": "Eidos AGI",
+    "category": "Productivity",
+    "capabilities": [
+      "CLI",
+      "Platform Gateway",
+      "Secret Vault",
+      "System Routing"
+    ],
+    "websiteURL": "https://github.com/eidos-agi/eidos-cli",
+    "privacyPolicyURL": "https://github.com/eidos-agi/eidos-cli",
+    "termsOfServiceURL": "https://github.com/eidos-agi/eidos-cli",
+    "defaultPrompt": [
+      "Ask Eidos which system should handle this.",
+      "Use Eidos to check platform health.",
+      "Use Eidos Vault to find the right secret path."
+    ],
+    "brandColor": "#111827"
+  }
+}
