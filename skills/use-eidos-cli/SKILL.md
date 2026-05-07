@@ -40,6 +40,7 @@ eidos vault keys --help
 After Eidos gives the operating picture, route to the specialist surface that owns the work:
 
 - Use Rhea for sovereign model routing, model debate, long-lived Rhea sessions, pairing, and image generation.
+- Use Felix for agent-building, pre-scaffold interviews, agent standards, maintainer loops, `AGENTS.md` wakeup files, and repo-health checks.
 - Use Foreman for parallel coding delegation to AI engineer workers in isolated git worktrees.
 - Use Reeves for Daniel's personal operating picture, finance freshness, mail/messages evidence, tasks, memory, and wiki.
 - Use Surfari for browser-agent runs, web-surfing evaluations, playbooks, and browser runtime improvement loops.

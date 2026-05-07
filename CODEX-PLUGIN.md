@@ -7,6 +7,7 @@ The architecture is intentionally CLI-first. Codex plugins and MCP shims should 
 ## Eidos AGI Plugin Family
 
 - `eidos@eidos-agi`: CLI-first gateway into the Eidos AGI platform and specialist systems.
+- `felix@eidos-agi`: routing layer for the live Felix agent-builder CLI.
 - `rhea@eidos-agi`: sovereign model routing, debate, pairing, and image tools.
 - `foreman@eidos-agi`: multi-agent coding delegation and git worktree execution.
 - `reeves@eidos-agi`: routing layer for the live Reeves CLI.
