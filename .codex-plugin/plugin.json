@@ -40,6 +40,8 @@
       "Use Eidos to check platform health.",
       "Use Eidos Vault to find the right secret path."
     ],
-    "brandColor": "#111827"
+    "brandColor": "#111827",
+    "composerIcon": "./assets/plugin-icon.svg",
+    "logo": "./assets/plugin-logo.svg"
   }
 }
