@@ -2,7 +2,7 @@
 
 Eidos is the gateway plugin for the Eidos AGI Codex plugin family. It tells Codex to use the live `eidos` CLI first for platform orientation, auth status, vault state, and routing into specialist systems.
 
-The architecture is intentionally CLI-first. Codex plugins and MCP shims should be small pointers into CLIs, not giant inventories of tools. The CLIs provide progressive reveal: top-level help, domain subcommands, status/doctor/list/find/ask commands, and deeper specialist affordances only when the task calls for them.
+The architecture is intentionally CLI-first. Codex plugins and MCP shims should be small pointers into CLIs, not giant inventories of tools. The CLIs provide progressive reveal: top-level help, domain subcommands, status/doctor/list/find/ask commands, and deeper specialist affordances only when the task calls for them. This is now part of the Eidos Marketplace standard: `/Users/dshanklinbv/repos-eidos-agi/eidos-marketplace/STANDARD.md`.
 
 ## Eidos AGI Plugin Family
 
