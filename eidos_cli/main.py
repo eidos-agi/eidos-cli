@@ -1,6 +1,7 @@
 """eidos — CLI for the Eidos AGI platform."""
 
 import json
+import sys
 
 import click
 import httpx
@@ -101,10 +102,44 @@ def vault_get(path: str):
 
 @vault.command("set")
 @click.argument("path")
-@click.argument("value")
+@click.argument("value", required=False)
 @click.option("--description", "-d", default="", help="Secret description")
-def vault_set(path: str, value: str, description: str):
-    """Create or update a secret."""
+@click.option(
+    "--stdin",
+    "from_stdin",
+    is_flag=True,
+    help="Read VALUE from stdin instead of argv (avoids exposing the secret in `ps`).",
+)
+def vault_set(path: str, value: str | None, description: str, from_stdin: bool):
+    """Create or update a secret.
+
+    Pass VALUE as the second positional argument, OR pass --stdin and pipe the
+    value on stdin. --stdin is preferred for sensitive values: it keeps the
+    secret out of argv (which is briefly visible via `ps aux`) and out of
+    shell history.
+
+    Examples:
+        eidos vault set pypi/token sk-abc123                  # argv
+        printf %s "$SECRET" | eidos vault set pypi/token --stdin
+        # native macOS dialog:
+        osascript -e 'text returned of (display dialog "Token:" default answer "" with hidden answer)' \\
+            | eidos vault set pypi/token --stdin
+    """
+    if from_stdin:
+        if value is not None:
+            click.echo("--stdin and a positional VALUE are mutually exclusive.", err=True)
+            raise SystemExit(2)
+        value = sys.stdin.read()
+        # Strip a single trailing newline only (preserve whitespace inside the value).
+        if value.endswith("\n"):
+            value = value[:-1]
+        if not value:
+            click.echo("--stdin received an empty value; refusing to write.", err=True)
+            raise SystemExit(2)
+    elif value is None:
+        click.echo("Missing VALUE. Pass it as an argument or use --stdin.", err=True)
+        raise SystemExit(2)
+
     resp = vault_request("POST", "/api/secrets", json={
         "path": path, "value": value, "description": description,
     })
