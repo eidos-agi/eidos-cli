@@ -479,6 +479,25 @@ def test_closeout_catches_missing_codex_plugin(tmp_path: Path):
     assert payload["codex_marketplace"]["missing"][0]["name"] == "missing"
 
 
+def test_closeout_catches_incomplete_plugin_run(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    run_dir = repo / ".eidos" / "praxis" / "plugin_runs" / "learn-123"
+    run_dir.mkdir(parents=True)
+    (run_dir / "context.json").write_text("{}")
+    (run_dir / "playbook.md").write_text("# learn\n")
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["plugin_runs"]["incomplete"][0]["path"].endswith("learn-123")
+
+
 # ── help / version sanity ──────────────────────────────────────────────────
 
 

@@ -139,6 +139,45 @@ def _codex_marketplace_check() -> dict:
     return result
 
 
+def _plugin_runs_check(paths: list[Path]) -> dict:
+    result = {
+        "kind": "plugin-runs",
+        "ok": True,
+        "status": "ok",
+        "checked": 0,
+        "incomplete": [],
+        "detail": "No incomplete plugin run workspaces found.",
+    }
+    seen: set[str] = set()
+    for path in paths:
+        runs_dir = path / ".eidos" / "praxis" / "plugin_runs"
+        if not runs_dir.is_dir():
+            continue
+        for run_dir in sorted(p for p in runs_dir.iterdir() if p.is_dir()):
+            key = str(run_dir.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            result["checked"] += 1
+            draft_dir = run_dir / "draft"
+            draft_files = [p for p in draft_dir.rglob("*") if p.is_file()] if draft_dir.is_dir() else []
+            if not draft_files:
+                result["incomplete"].append(
+                    {
+                        "path": str(run_dir),
+                        "detail": "No draft outputs found. Continue/install the plugin draft or remove the run.",
+                    }
+                )
+
+    if result["incomplete"]:
+        result.update(
+            ok=False,
+            status="needs-attention",
+            detail="One or more plugin run workspaces have no draft outputs.",
+        )
+    return result
+
+
 def _format(report: dict) -> str:
     lines = [f"Closeout verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}", "", "Git repositories:"]
     for check in report["git"]:
@@ -158,18 +197,33 @@ def _format(report: dict) -> str:
     lines.append(f"  checked={mp.get('checked', 0)} missing={len(mp.get('missing', []))}")
     for missing in mp.get("missing", [])[:10]:
         lines.append(f"  missing {missing['name']}: {missing['path']}")
+    runs = report["plugin_runs"]
+    marker = "PASS" if runs["ok"] else "FAIL"
+    lines.extend(["", f"Plugin runs: {marker}"])
+    lines.append(
+        f"  checked={runs.get('checked', 0)} incomplete={len(runs.get('incomplete', []))}"
+    )
+    for incomplete in runs.get("incomplete", [])[:10]:
+        lines.append(f"  incomplete {incomplete['path']}: {incomplete['detail']}")
     return "\n".join(lines)
 
 
 def build_report(path: Optional[str], repos: list[str], include_codex_marketplace: bool) -> dict:
-    git_checks = [_git_check(p) for p in _resolve_repo_paths(path, repos)]
+    repo_paths = _resolve_repo_paths(path, repos)
+    git_checks = [_git_check(p) for p in repo_paths]
     codex_marketplace = (
         _codex_marketplace_check()
         if include_codex_marketplace
         else {"kind": "codex-marketplace", "ok": True, "status": "skipped"}
     )
-    ok = all(check["ok"] for check in git_checks) and codex_marketplace["ok"]
-    return {"ok": ok, "git": git_checks, "codex_marketplace": codex_marketplace}
+    plugin_runs = _plugin_runs_check(repo_paths)
+    ok = all(check["ok"] for check in git_checks) and codex_marketplace["ok"] and plugin_runs["ok"]
+    return {
+        "ok": ok,
+        "git": git_checks,
+        "codex_marketplace": codex_marketplace,
+        "plugin_runs": plugin_runs,
+    }
 
 
 def register(app: typer.Typer) -> None:
