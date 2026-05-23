@@ -1,0 +1,24 @@
+slug: learn
+version: 0.1.0
+alias: learn
+description: |
+  Promote a praxis turn (or a candidate from the plugin-candidate ledger)
+  into a reusable plugin. Reads recent praxis turns from the current
+  eidos, asks the substrate to synthesize a draft plugin manifest, and
+  writes it under <work_dir>/draft/ for the user to review and install
+  via `eidos plugin install <path>`.
+
+# Conditions a substrate may use to decide whether to suggest this
+# plugin. The engine reads these advisorily; they are not enforced.
+when_to_fire:
+  - "a praxis turn explicitly flags a reusable pattern"
+  - "the plugin-candidate ledger crosses the threshold for a tag"
+  - "user invokes `eidos learn` explicitly"
+
+owner_forge: praxis
+
+# What evidence the verify step expects under draft/ before promotion.
+required_evidence:
+  - "draft/plugin.yaml"
+  - "draft/playbook.md"
+  - "draft/provenance.json"

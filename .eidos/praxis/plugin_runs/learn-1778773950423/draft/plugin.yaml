@@ -1,0 +1,22 @@
+slug: promote-task-to-child-eidos
+version: 0.1.0
+alias: promote
+description: |
+  When a docket task is too complex to be a leaf — multi-step, multi-skill,
+  or requiring its own governance — promote it to a child eidos with its
+  own four-field telos contract instead of expanding the parent task's
+  scope. The child inherits parent anti-goals by default and gets its own
+  active forge set chosen for the work.
+
+when_to_fire:
+  - "a docket task's body grows past ~10 sub-bullets or requires ≥2 distinct skill domains"
+  - "the task needs its own governance artifacts (ADRs, SOPs, guardrails) that would pollute the parent"
+  - "the task has a meaningful failure_when that diverges from the parent's"
+  - "the task will produce its own praxis trail worth keeping separate"
+
+owner_forge: docket
+
+required_evidence:
+  - "evidence/child_id.txt"
+  - "evidence/pod_log_excerpt.md"
+  - "evidence/promoted_task_path.txt"

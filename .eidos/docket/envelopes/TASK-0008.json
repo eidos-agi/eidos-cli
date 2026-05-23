@@ -1,0 +1,14 @@
+{
+  "eidos_id": "a4941f5c-5493-4efc-9a54-4719280f553a",
+  "task_id": "TASK-0008",
+  "task_version": "2026-05-14T09:55:05.365689",
+  "plan_hash": "e715eba70a552a44",
+  "sor_routing_hash": "missing",
+  "member_repo_heads": {},
+  "substrate_label": "claude-code",
+  "evidence_bundle_path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/docket/evidence/TASK-0008",
+  "created_at": "2026-05-14T10:01:04.727228",
+  "cardinality": "solo",
+  "cardinality_rationale": "No escalation triggers fired. Solo is the doctrinal default.",
+  "cardinality_triggers": []
+}

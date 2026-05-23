@@ -1,0 +1,40 @@
+{
+  "eidos_home": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+  "eidos_id": "a4941f5c-5493-4efc-9a54-4719280f553a",
+  "eidos_name": "eidos-cli-v1",
+  "task_id": "TASK-0010",
+  "task_path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/docket/tasks/TASK-0010 - system-of-record-routing-config-for-eidos-do-docum.md",
+  "task": {
+    "frontmatter": {
+      "id": "TASK-0010",
+      "title": "system-of-record routing config for eidos do DOCUMENT step",
+      "status": "To Do",
+      "created": "2026-05-14"
+    },
+    "body": "When eidos do completes a task, the DOCUMENT step writes back to whichever system of record the task improved (docs, ADRs, external APIs, etc.). The routing rules live in .eidos/governor/sops/ \u2014 e.g., 'tasks tagged docs \u2192 update README.md or eidos-philosophy/'; 'tasks tagged infra \u2192 update Pulumi state'; 'tasks tagged research \u2192 write finding to research forge'. SOP-based, so per-eidos configurable. Initial rules: task tagged 'docs' \u2192 update relevant .md; task tagged 'governance' \u2192 write ADR; default \u2192 write to docket completed/ only.\n"
+  },
+  "telos": {
+    "statement": "Ship eidos-cli v1.0 \u2014 the unified agent CLI for the Eidos scope architecture, per THE-EIDOS doctrine and ADR-007",
+    "success_when": [
+      "eidos define/enter/status/activate/close work end-to-end with the four-field telos contract gate",
+      "eidos research/governor/docket/praxis namespaces route to the five forge libraries",
+      "eidos mcp serve boots a razor-thin help-only MCP server",
+      "eidos migrate consolidates legacy .telos/.research/.governor/.docket/.hone into a single .eidos/ idempotently",
+      "eidos spawn promotes a docket item to a child eidos",
+      "eidos tick emits drift classification against the telos triggers"
+    ],
+    "failure_when": [
+      "doctrine in THE-EIDOS and code in eidos-cli diverge silently",
+      "the migration corrupts existing consumer state",
+      "Solo-default is bypassed in favor of unconditional Pod-default"
+    ],
+    "success_when_not": [
+      "becomes a chat-mode conversational assistant",
+      "duplicates the five forge libraries' internal logic",
+      "couples eidos to a single LLM provider",
+      "imposes ceremony on tasks an AI can do in one pass"
+    ]
+  },
+  "guardrails": [],
+  "recent_praxis_turns": []
+}

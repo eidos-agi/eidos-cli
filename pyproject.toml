@@ -4,16 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eidos-cli"
-version = "0.1.0"
-description = "CLI for the Eidos AGI platform"
+version = "0.2.0"
+description = "Eidos AGI — unified agent surface for the scope architecture (telos + trilogy + praxis)"
 requires-python = ">=3.10"
 dependencies = [
-    "click>=8.1",
+    "typer>=0.12.0",
     "httpx>=0.27",
+    "pyyaml>=6.0",
+    "mcp>=1.0.0",
+    "telos-md>=0.4.1",
+    "research-md>=0.5.1",
+    "governor-md>=0.4.1",
+    "docket-md>=0.4.1",
+    "praxis-md>=0.1.0",
 ]
 
 [project.scripts]
-eidos = "eidos_cli.main:cli"
+eidos = "eidos_cli.main:main"
 
 [tool.setuptools.packages.find]
 include = ["eidos_cli*"]
+
+[tool.setuptools.package-data]
+"eidos_cli.plugins" = ["**/*"]
+"eidos_cli.guides" = ["**/*.md"]

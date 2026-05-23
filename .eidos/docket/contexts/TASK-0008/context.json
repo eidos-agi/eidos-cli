@@ -1,0 +1,54 @@
+{
+  "eidos_home": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+  "eidos_id": "a4941f5c-5493-4efc-9a54-4719280f553a",
+  "eidos_name": "eidos-cli-v1",
+  "task_id": "TASK-0008",
+  "task_path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/docket/tasks/TASK-0008 - build-eidos-do-task-id-the-orchestrating-engine.md",
+  "task": {
+    "frontmatter": {
+      "id": "TASK-0008",
+      "title": "Build eidos do <task-id> \u2014 the orchestrating engine",
+      "status": "In Progress",
+      "created": "2026-05-14",
+      "updated": "2026-05-14"
+    },
+    "body": "The canonical work-execution verb. Runs the full discipline: STUDY (load task + telos + active guardrails + relevant praxis turns) \u2192 RESEARCH (search prior findings) \u2192 ADVERSARIAL pass (gotchas, unknown unknowns, false premises) \u2192 PLAN \u2192 CARDINALITY check (Solo by default; escalate if triggers fire) \u2192 ACT \u2192 VERIFY (forge contracts + anti-goals not violated) \u2192 LEARN (praxis turn) \u2192 DOCUMENT (system-of-record routing per task tags) \u2192 META (log plugin candidate; do not auto-build). This is the integration point of every primitive \u2014 telos, four forges, Pod cardinality, system-of-record routing, praxis learning loop. ~3-5 days. Depends on TASK-0001 (path resolution) + TASK-0006 (praxis-md rename) + TASK-0005 (eidos tick) landing first.\n"
+  },
+  "telos": {
+    "statement": "Ship eidos-cli v1.0 \u2014 the unified agent CLI for the Eidos scope architecture, per THE-EIDOS doctrine and ADR-007",
+    "success_when": [
+      "eidos define/enter/status/activate/close work end-to-end with the four-field telos contract gate",
+      "eidos research/governor/docket/praxis namespaces route to the five forge libraries",
+      "eidos mcp serve boots a razor-thin help-only MCP server",
+      "eidos migrate consolidates legacy .telos/.research/.governor/.docket/.hone into a single .eidos/ idempotently",
+      "eidos spawn promotes a docket item to a child eidos",
+      "eidos tick emits drift classification against the telos triggers"
+    ],
+    "failure_when": [
+      "doctrine in THE-EIDOS and code in eidos-cli diverge silently",
+      "the migration corrupts existing consumer state",
+      "Solo-default is bypassed in favor of unconditional Pod-default"
+    ],
+    "success_when_not": [
+      "becomes a chat-mode conversational assistant",
+      "duplicates the five forge libraries' internal logic",
+      "couples eidos to a single LLM provider",
+      "imposes ceremony on tasks an AI can do in one pass"
+    ]
+  },
+  "guardrails": [],
+  "recent_praxis_turns": [
+    {
+      "tick_id": "TASK-0010.100040",
+      "summary": "system-of-record routing config for eidos do DOCUMENT step",
+      "outcome": "improved",
+      "path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/praxis/turns/TASK-0010.100040.md"
+    },
+    {
+      "tick_id": "TASK-0010.095943",
+      "summary": "system-of-record routing config for eidos do DOCUMENT step",
+      "outcome": "blocked",
+      "path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/praxis/turns/TASK-0010.095943.md"
+    }
+  ]
+}

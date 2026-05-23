@@ -1,0 +1,14 @@
+{
+  "id": "a4941f5c-5493-4efc-9a54-4719280f553a",
+  "name": "eidos-cli-v1",
+  "home": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+  "parent_id": null,
+  "members": [],
+  "telos_hash": "adb59729656ea76c",
+  "active_forges": [
+    "docket",
+    "governor",
+    "praxis"
+  ],
+  "created": "2026-05-14"
+}

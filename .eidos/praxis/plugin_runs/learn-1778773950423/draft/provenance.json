@@ -1,0 +1,9 @@
+{
+  "source_turns": [
+    "TASK-0004.101323.md"
+  ],
+  "source_eidos_id": "a4941f5c-5493-4efc-9a54-4719280f553a",
+  "promoted_by": "learn",
+  "promoted_at": "2026-05-14",
+  "rationale": "eidos spawn shipped today is the canonical pattern for promoting a complex docket task into its own scope. The praxis turn captured it once; promoting to a plugin makes the pattern reusable across every eidos via the user-global plugin store."
+}

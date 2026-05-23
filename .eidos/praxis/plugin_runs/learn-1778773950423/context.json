@@ -1,0 +1,11 @@
+{
+  "plugin_slug": "learn",
+  "plugin_scope": "global",
+  "plugin_version": "0.1.0",
+  "plugin_path": "/Users/dshanklinbv/.eidos/plugins/learn",
+  "invocation_id": "learn-1778773950423",
+  "eidos_home": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+  "args": {},
+  "draft_dir": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/praxis/plugin_runs/learn-1778773950423/draft",
+  "started": "2026-05-14"
+}
