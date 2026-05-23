@@ -1,10 +1,10 @@
 {
   "name": "eidos",
   "version": "0.1.0",
-  "description": "Use the live Eidos CLI as the progressive-reveal gateway into Eidos AGI systems.",
+  "description": "Turn docket tasks into tracked, evidenced Eidos loops with `eidos do`, then route, verify, and learn from the work.",
   "author": {
     "name": "Eidos AGI",
-    "email": "TODO@example.com",
+    "email": "daniel@eidosagi.com",
     "url": "https://github.com/eidos-agi"
   },
   "homepage": "https://github.com/eidos-agi/eidos-cli",
@@ -22,12 +22,15 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Eidos",
-    "shortDescription": "Use Eidos as the gateway into Eidos AGI systems.",
-    "longDescription": "Eidos is the gateway Codex plugin for Eidos AGI. It keeps Codex out of giant MCP surfaces by pointing first to the installed Eidos CLI, where broad platform questions can progressively reveal the right specialist CLI such as Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Eidos Vault.",
+    "shortDescription": "Make work accountable: orient, run `eidos do`, verify evidence, and learn.",
+    "longDescription": "Eidos turns a vague or docketed task into a tracked, evidenced loop. Use it to orient with `eidos guide/status/health`, execute docket work with `eidos do <task-id>`, continue with evidence verification, capture the praxis learning, and route specialist work to Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Felix only when needed. The plugin does not do the work itself; it starts and closes the loop around the work.",
     "developerName": "Eidos AGI",
     "category": "Productivity",
     "capabilities": [
       "CLI",
+      "Task Loop",
+      "Evidence Verification",
+      "Learning Capture",
       "Platform Gateway",
       "Secret Vault",
       "System Routing"
@@ -36,9 +39,9 @@
     "privacyPolicyURL": "https://github.com/eidos-agi/eidos-cli",
     "termsOfServiceURL": "https://github.com/eidos-agi/eidos-cli",
     "defaultPrompt": [
-      "Ask Eidos which system should handle this.",
-      "Use Eidos to check platform health.",
-      "Use Eidos Vault to find the right secret path."
+      "Start the Eidos loop for TASK-1234.",
+      "Check this eidos before we work.",
+      "Route this task to the right specialist."
     ],
     "brandColor": "#111827",
     "composerIcon": "./assets/plugin-icon.svg",

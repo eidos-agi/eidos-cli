@@ -1,8 +1,53 @@
 # Eidos Codex Plugin
 
-Eidos is the gateway plugin for the Eidos AGI Codex plugin family. It tells Codex to use the live `eidos` CLI first for platform orientation, auth status, vault state, and routing into specialist systems.
+Eidos turns a vague or docketed task into a tracked, evidenced loop.
 
-The architecture is intentionally CLI-first. Codex plugins and MCP shims should be small pointers into CLIs, not giant inventories of tools. The CLIs provide progressive reveal: top-level help, domain subcommands, status/doctor/list/find/ask commands, and deeper specialist affordances only when the task calls for them. This is now part of the Eidos Marketplace standard: `/Users/dshanklinbv/repos-eidos-agi/eidos-marketplace/STANDARD.md`.
+This Codex plugin teaches the agent when to start that loop, when to close it, and when to route to a specialist. The live `eidos` CLI is the runtime; the plugin is the reflex.
+
+## The Job
+
+Use Eidos when work needs to be accountable:
+
+- take a docket task
+- gather context
+- decide Solo, Pair, or Pod cardinality
+- hand Codex the right working packet
+- require evidence before completion
+- write the learning back into the system
+- route specialist work only when needed
+
+## Three Modes
+
+Orient:
+
+```bash
+eidos guide
+eidos status
+eidos health
+```
+
+Execute:
+
+```bash
+eidos do <task-id>
+eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one-line>"
+```
+
+Route / Learn:
+
+```bash
+eidos plugin list
+eidos plugin show <name>
+eidos vault list
+```
+
+The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context bundle and continuation envelope, then returns control to the substrate. After Codex acts and writes evidence, the continue invocation verifies evidence, writes the praxis turn, routes the system-of-record update, and can create plugin-learning candidates.
+
+## Non-Goal
+
+This plugin does not do the work itself. It starts and closes the loop around the work.
+
+The architecture is intentionally CLI-first. Codex plugins and MCP shims should be small pointers into CLIs, not giant inventories of tools. The CLIs provide progressive reveal: guide pages, status/health checks, domain subcommands, task loops, plugin commands, vault/auth commands, and deeper specialist affordances only when the task calls for them. This is now part of the Eidos Marketplace standard: `/Users/dshanklinbv/repos-eidos-agi/eidos-marketplace/STANDARD.md`.
 
 ## Eidos AGI Plugin Family
 
@@ -61,7 +106,10 @@ Restart Codex after editing config.
 ## Smoke Test
 
 ```bash
+eidos guide
 eidos --help
 eidos status
 eidos health
+eidos do --help
+eidos plugin list
 ```

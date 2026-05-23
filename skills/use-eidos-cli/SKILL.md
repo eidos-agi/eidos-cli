@@ -1,19 +1,34 @@
 ---
 name: use-eidos-cli
-description: Use when the user asks about Eidos, Eidos AGI, platform status, gateway routing, vault/secrets, or which Eidos AGI specialist system should handle a task. This skill tells Codex to call the installed `eidos` CLI first; MCP and plugins should only point to CLIs, while CLIs provide progressive reveal of the deeper tool graph.
+description: Use when the user asks about Eidos, Eidos AGI, platform status, `eidos do`, docket-task orchestration, evidence verification, praxis learning, gateway routing, vault/secrets, plugins, or which Eidos AGI specialist system should handle a task. This skill tells Codex to call the installed `eidos` CLI first; MCP and plugins should only point to CLIs, while CLIs provide progressive reveal of the deeper tool graph.
 ---
 
 # Use Eidos CLI
 
-Use the installed `eidos` CLI as the first stop for Eidos AGI platform questions. Eidos is the gateway layer: it should orient Codex before Codex reaches for specialist tools.
+Use Eidos when work needs to become a tracked, evidenced loop.
+
+The installed `eidos` CLI is the first stop for Eidos AGI platform questions and task loops. Eidos orients Codex, runs docket tasks through `eidos do`, verifies evidence on continuation, captures praxis learning, handles auth/vault/status checks, and routes to specialist tools only when needed.
 
 ## Architecture Principle
 
 Get away from giant MCP tool surfaces. Use MCP and Codex plugins as small signposts that point to local CLIs. The CLIs are the real progressive-reveal interface: `--help`, subcommands, `doctor`, `status`, `list`, `find`, `ask`, and domain-specific commands can expose thousands of tools without loading all of them into Codex at once.
 
-In practice:
+In practice, Eidos has three modes:
 
-- Start with `eidos --help`, `eidos status`, or `eidos health`.
+1. Orient
+   Use `eidos guide`, `eidos status`, and `eidos health` to understand the current eidos before acting.
+
+2. Execute
+   Use `eidos do <task-id>` and `eidos do --continue <task-id> --evidence <path>` when the user gives a docket task or asks to operate the Eidos loop.
+
+3. Route / Learn
+   Use `eidos plugin ...`, vault/auth commands, and specialist CLIs after the live Eidos output shows who owns the next step.
+
+Operationally:
+
+- Start with `eidos guide` for broad orientation.
+- Use `eidos status` or `eidos health` for current operating state.
+- Use `eidos do <task-id>` when the user is asking to work a docket task through the Eidos loop.
 - Let Eidos identify the relevant domain or specialist.
 - Run that specialist CLI's smallest useful command.
 - Only use MCP when it is the pointer or bridge to a CLI, not as the primary place to model every capability.
@@ -22,12 +37,27 @@ In practice:
 
 When the user asks a broad Eidos AGI question, run the smallest relevant `eidos` command first, then answer from live output and route onward only when needed.
 
+When the user gives a docket task ID or asks to operate the Eidos loop, use `eidos do`:
+
+```bash
+eidos do <task-id>
+eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one-line>"
+```
+
+The first invocation performs PERCEIVE and CARDINALITY, writes the context bundle, plan/evidence locations, and continuation envelope, then returns control to the substrate. The continue invocation verifies evidence, records the outcome, writes the praxis turn, and routes learning.
+
 Useful entrypoints:
 
 ```bash
 eidos --help
+eidos guide
+eidos guide loop
 eidos status
 eidos health
+eidos do <task-id>
+eidos do --continue <task-id> --evidence <path>
+eidos plugin list
+eidos plugin show <name>
 eidos vault --help
 eidos vault list
 eidos vault get <path>
@@ -48,6 +78,12 @@ After Eidos gives the operating picture, route to the specialist surface that ow
 - Use Eidos Vault for secret paths, API key status, and platform credentials when a task explicitly requires them.
 
 Prefer the specialist CLI after routing. A plugin or MCP shim may help Codex discover or call the CLI, but the CLI should own the domain logic and deeper tool reveal.
+
+## What This Plugin Does Not Do
+
+This plugin does not do the work itself. It starts and closes the loop around the work.
+
+It does not reimplement the Eidos runtime. It does not contain platform state, task data, vault secrets, or specialist business logic. It teaches Codex the reflex: call `eidos`, read the live output, act with evidence, then route, verify, or learn from there.
 
 ## Vault And Secrets Boundary
 
