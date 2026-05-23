@@ -29,13 +29,19 @@ import pytest
 EIDOS = "eidos"  # installed via pip install -e .
 
 
-def _run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
+def _run(
+    args: list[str], cwd: Path | None = None, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess:
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
     return subprocess.run(
         [EIDOS, *args],
         cwd=str(cwd) if cwd else None,
         capture_output=True,
         text=True,
         timeout=30,
+        env=run_env,
     )
 
 
@@ -400,13 +406,86 @@ def test_close_supersede_requires_pointer(temp_eidos):
     assert "--superseded-by" in (proc.stderr + proc.stdout)
 
 
+# ── closeout ───────────────────────────────────────────────────────────────
+
+
+def _init_git_repo(path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "smoke@example.com"], cwd=path, check=True)
+    subprocess.run(["git", "config", "user.name", "Smoke Test"], cwd=path, check=True)
+    (path / "README.md").write_text("ok\n")
+    subprocess.run(["git", "add", "README.md"], cwd=path, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True, text=True)
+
+
+def test_closeout_passes_for_clean_repo(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["ok"] is True
+    assert payload["git"][0]["clean"] is True
+
+
+def test_closeout_fails_for_dirty_repo(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / "dirty.txt").write_text("untracked\n")
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["ok"] is False
+    assert payload["git"][0]["untracked_count"] == 1
+
+
+def test_closeout_catches_missing_codex_plugin(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    marketplace_root = tmp_path / ".agents" / "plugins"
+    marketplace_root.mkdir(parents=True)
+    marketplace = marketplace_root / "marketplace.json"
+    marketplace.write_text(
+        json.dumps(
+            {
+                "plugins": [
+                    {
+                        "name": "missing",
+                        "source": {"source": "local", "path": "./plugins/missing"},
+                    }
+                ]
+            }
+        )
+    )
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["codex_marketplace"]["missing"][0]["name"] == "missing"
+
+
 # ── help / version sanity ──────────────────────────────────────────────────
 
 
 def test_top_level_help_lists_scope_verbs():
     proc = _run(["--help"])
     assert proc.returncode == 0
-    for verb in ("define", "enter", "status", "activate", "tick", "close"):
+    for verb in ("define", "enter", "status", "activate", "tick", "closeout", "close"):
         assert verb in proc.stdout
 
 

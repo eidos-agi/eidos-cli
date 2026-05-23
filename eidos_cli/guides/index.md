@@ -28,6 +28,7 @@ SCOPE:        eidos define <path>    — bring an eidos into being
               eidos status           — one-line health snapshot
               eidos activate <forge> — scaffold a dormant forge
               eidos tick             — drift-against-telos snapshot
+              eidos closeout         — prove repos/plugins are clean before closing
               eidos close            — terminally close with outcome
 
 LOOP:         eidos do <task-id>     — run THE-LOOP for a docket task

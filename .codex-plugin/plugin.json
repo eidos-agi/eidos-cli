@@ -1,7 +1,7 @@
 {
   "name": "eidos",
   "version": "0.1.0",
-  "description": "Turn docket tasks into tracked, evidenced Eidos loops with `eidos do`, then route, verify, and learn from the work.",
+  "description": "Turn docket tasks into tracked, evidenced Eidos loops with `eidos do`, then verify, learn, and close out cleanly.",
   "author": {
     "name": "Eidos AGI",
     "email": "daniel@eidosagi.com",
@@ -22,8 +22,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Eidos",
-    "shortDescription": "Make work accountable: orient, run `eidos do`, verify evidence, and learn.",
-    "longDescription": "Eidos turns a vague or docketed task into a tracked, evidenced loop. Use it to orient with `eidos guide/status/health`, execute docket work with `eidos do <task-id>`, continue with evidence verification, capture the praxis learning, and route specialist work to Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Felix only when needed. The plugin does not do the work itself; it starts and closes the loop around the work.",
+    "shortDescription": "Make work accountable: orient, run `eidos do`, verify, learn, close out.",
+    "longDescription": "Eidos turns a vague or docketed task into a tracked, evidenced loop. Use it to orient with `eidos guide/status/health`, execute docket work with `eidos do <task-id>`, continue with evidence verification, capture praxis learning, run `eidos closeout` before declaring done, and route specialist work to Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Felix only when needed. The plugin does not do the work itself; it starts and closes the loop around the work.",
     "developerName": "Eidos AGI",
     "category": "Productivity",
     "capabilities": [
@@ -31,6 +31,7 @@
       "Task Loop",
       "Evidence Verification",
       "Learning Capture",
+      "Closeout Checks",
       "Platform Gateway",
       "Secret Vault",
       "System Routing"
@@ -40,7 +41,7 @@
     "termsOfServiceURL": "https://github.com/eidos-agi/eidos-cli",
     "defaultPrompt": [
       "Start the Eidos loop for TASK-1234.",
-      "Check this eidos before we work.",
+      "Run closeout before we call this done.",
       "Route this task to the right specialist."
     ],
     "brandColor": "#111827",

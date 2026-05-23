@@ -3,7 +3,7 @@
 The unified agent-facing CLI for the Eidos scope architecture. Verbs are
 organized into:
 
-- **Scope** (``define / enter / status / activate / close / spawn / tick``) —
+- **Scope** (``define / enter / status / activate / close / closeout / spawn / tick``) —
   the eidos lifecycle.
 - **Forge namespaces** (``eidos telos / research / governor / docket / praxis``)
   — direct access to the five forge libraries.

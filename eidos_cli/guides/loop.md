@@ -38,6 +38,19 @@ eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one
 5. **LEARN** — write the praxis turn. Route the artifact to its system
    of record. Log a plugin candidate if a stable pattern_id is present.
 
+## Closeout
+
+Before saying a mission is finished, run:
+
+```
+eidos closeout
+```
+
+Closeout is read-only. It checks git cleanliness and upstream sync for the
+current eidos/repo plus Codex marketplace plugin pointers. It is the final
+residue scan: dirty repos, unpushed commits, dangling plugin entries, and
+other cleanup work should be resolved before the loop is treated as closed.
+
 ## The continuation envelope
 
 A hash of the per-task state (eidos id, task version, plan hash, SOR

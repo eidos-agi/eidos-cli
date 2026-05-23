@@ -2,7 +2,7 @@
 
 Eidos turns a vague or docketed task into a tracked, evidenced loop.
 
-This Codex plugin teaches the agent when to start that loop, when to close it, and when to route to a specialist. The live `eidos` CLI is the runtime; the plugin is the reflex.
+This Codex plugin teaches the agent when to start that loop, when to close it out, and when to route to a specialist. The live `eidos` CLI is the runtime; the plugin is the reflex.
 
 ## The Job
 
@@ -13,6 +13,7 @@ Use Eidos when work needs to be accountable:
 - decide Solo, Pair, or Pod cardinality
 - hand Codex the right working packet
 - require evidence before completion
+- run closeout before claiming done
 - write the learning back into the system
 - route specialist work only when needed
 
@@ -33,15 +34,18 @@ eidos do <task-id>
 eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one-line>"
 ```
 
-Route / Learn:
+Closeout / Route / Learn:
 
 ```bash
+eidos closeout
 eidos plugin list
 eidos plugin show <name>
 eidos vault list
 ```
 
 The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context bundle and continuation envelope, then returns control to the substrate. After Codex acts and writes evidence, the continue invocation verifies evidence, writes the praxis turn, routes the system-of-record update, and can create plugin-learning candidates.
+
+`eidos closeout` is the final cleanup gate. It is read-only and checks for dirty repos, unpushed commits, and dangling Codex marketplace plugin entries before the agent says the mission is closed.
 
 ## Non-Goal
 
@@ -111,5 +115,6 @@ eidos --help
 eidos status
 eidos health
 eidos do --help
+eidos closeout
 eidos plugin list
 ```

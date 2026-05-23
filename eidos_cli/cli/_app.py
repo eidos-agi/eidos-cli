@@ -16,7 +16,7 @@ app = typer.Typer(
         "\n"
         "eidos — unified agent surface for the Eidos scope architecture.\n"
         "\n"
-        "SCOPE:        eidos define ... | enter | status | activate | close | spawn | tick\n"
+        "SCOPE:        eidos define ... | enter | status | activate | close | closeout | spawn | tick\n"
         "LOOP:         eidos do <task-id>          (PERCEIVE → CARDINALITY → … → LEARN)\n"
         "FORGES:       eidos telos ... | research ... | governor ... | docket ... | praxis ...\n"
         "PLUGINS:      eidos plugin list | install | run | show     |   eidos learn\n"
@@ -79,6 +79,7 @@ def emit(result, *, json_mode: bool) -> None:
 def _wire() -> None:
     """Mount the subcommand groups. Local imports keep startup light."""
     from . import auth as _auth_cmd
+    from . import closeout as _closeout_cmd
     from . import do as _do_cmd
     from . import forges as _forges_cmd
     from . import guide as _guide_cmd
@@ -93,6 +94,7 @@ def _wire() -> None:
     # Scope verbs at top level — the architectural surface of eidos-cli.
     _scope_cmd.register(app)
     _migrate_cmd.register(app)
+    _closeout_cmd.register(app)
     _do_cmd.register(app)
     _spawn_cmd.register(app)
     _guide_cmd.register(app)
