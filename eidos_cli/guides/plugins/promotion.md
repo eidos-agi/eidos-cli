@@ -44,12 +44,18 @@ has the required fields with a non-empty source_turns list.
 ## After verify passes
 
 ```
-eidos plugin install <work_dir>/draft --scope global
+eidos learn --finish --work-dir <work_dir> --scope global
 ```
 
-The destination dir is named from the manifest's `slug`, not `draft`.
-If the plugin declares an `alias`, it appears as a top-level command
-on the *next* `eidos` invocation.
+`--finish` runs verify first, then installs `<work_dir>/draft`. The
+destination dir is named from the manifest's `slug`, not `draft`. If
+the plugin declares an `alias`, it appears as a top-level command on
+the *next* `eidos` invocation.
+
+Use `eidos learn --status` to see in-flight promotion workspaces. Before
+closing a mission, `eidos closeout` reports unfinished learn runs and
+prints the exact next commands to inspect, verify, finish, or manually
+discard them.
 
 ## What good promotion looks like
 

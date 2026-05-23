@@ -22,6 +22,45 @@ import typer
 app = typer.Typer(name="plugin", help="Plugin runtime: list, install, run, show.")
 
 
+def install_plugin_dir(source: Path, *, scope: str, force: bool, eidos_home: Optional[Path]) -> dict:
+    """Install a plugin directory into the local or global store."""
+    from ..plugin_runtime.store import USER_GLOBAL_STORE, local_store_for
+
+    src = source.expanduser().resolve()
+    if not src.is_dir():
+        raise ValueError(f"{src} is not a directory")
+    if not (src / "plugin.yaml").is_file():
+        raise ValueError(f"{src}/plugin.yaml not found")
+
+    if scope == "local":
+        store = local_store_for(eidos_home)
+        if store is None:
+            raise ValueError(
+                "--scope local requires being inside an eidos. "
+                "Run inside an eidos or use --scope global."
+            )
+    elif scope == "global":
+        store = USER_GLOBAL_STORE
+    else:
+        raise ValueError(f"--scope must be 'local' or 'global', got {scope!r}")
+
+    store.mkdir(parents=True, exist_ok=True)
+    import yaml as _yaml
+
+    try:
+        manifest = _yaml.safe_load((src / "plugin.yaml").read_text()) or {}
+        slug = str(manifest.get("slug") or src.name).strip()
+    except Exception:
+        slug = src.name
+    dst = store / slug
+    if dst.exists() and not force:
+        raise FileExistsError(f"{dst} already exists. Use --force to overwrite.")
+    if dst.exists() and force:
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    return {"ok": True, "slug": slug, "scope": scope, "installed_at": str(dst)}
+
+
 @app.command("list")
 def cmd_list(
     candidates: Annotated[
@@ -114,59 +153,22 @@ def cmd_install(
 ) -> None:
     """Copy a plugin directory into the chosen store."""
     from ._app import emit
-    from ..plugin_runtime.store import USER_GLOBAL_STORE, local_store_for
     from ..scope.resolver import resolve_from_cwd
 
-    src = Path(source).expanduser().resolve()
-    if not src.is_dir():
-        typer.echo(f"error: {src} is not a directory", err=True)
-        raise typer.Exit(code=1)
-    if not (src / "plugin.yaml").is_file():
-        typer.echo(f"error: {src}/plugin.yaml not found", err=True)
-        raise typer.Exit(code=1)
-
-    if scope == "local":
-        eidos_home = resolve_from_cwd()
-        store = local_store_for(eidos_home)
-        if store is None:
-            typer.echo(
-                "error: --scope local requires being inside an eidos. "
-                "Run inside an eidos or use --scope global.",
-                err=True,
-            )
-            raise typer.Exit(code=1)
-    elif scope == "global":
-        store = USER_GLOBAL_STORE
-    else:
-        typer.echo(f"error: --scope must be 'local' or 'global', got {scope!r}", err=True)
-        raise typer.Exit(code=1)
-
-    store.mkdir(parents=True, exist_ok=True)
-    # Resolve slug from manifest, falling back to source dir name. The
-    # destination directory name matches the slug so filesystem-level lookup
-    # by slug works (find_plugin scans dir names then reads manifest).
-    import yaml as _yaml
-
     try:
-        manifest = _yaml.safe_load((src / "plugin.yaml").read_text()) or {}
-        slug = str(manifest.get("slug") or src.name).strip()
-    except Exception:
-        slug = src.name
-    dst = store / slug
-    if dst.exists() and not force:
-        typer.echo(
-            f"error: {dst} already exists. Use --force to overwrite.", err=True
+        result = install_plugin_dir(
+            Path(source),
+            scope=scope,
+            force=force,
+            eidos_home=resolve_from_cwd(),
         )
+    except (ValueError, FileExistsError) as e:
+        typer.echo(f"error: {e}", err=True)
         raise typer.Exit(code=1)
-    if dst.exists() and force:
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst)
-
-    result = {"ok": True, "slug": slug, "scope": scope, "installed_at": str(dst)}
     if json_:
         emit(result, json_mode=True)
         return
-    typer.echo(f"installed {slug} ({scope}) → {dst}")
+    typer.echo(f"installed {result['slug']} ({scope}) → {result['installed_at']}")
 
 
 @app.command("run")

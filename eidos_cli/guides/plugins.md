@@ -31,8 +31,17 @@ engine scans both stores and registers each alias as a top-level
 command that dispatches to `eidos plugin run <slug>`. Aliases colliding
 with engine primitives are rejected — primitives win.
 
-That is why `eidos learn` exists as a top-level command: the bundled
-`learn` plugin declares `alias: learn`.
+`eidos learn` is first-class because promotion is the common path. It
+wraps the bundled `learn` plugin so operators can start, inspect,
+verify, and finish a draft without remembering the lower-level plugin
+runtime commands:
+
+```
+eidos learn --arg from_praxis=<tick-id>
+eidos learn --status
+eidos learn --continue --work-dir <path>
+eidos learn --finish --work-dir <path> --scope global
+```
 
 ## Two-tier store
 

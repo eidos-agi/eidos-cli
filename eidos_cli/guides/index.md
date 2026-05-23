@@ -38,7 +38,7 @@ FORGES:       eidos telos / research / governor / docket / praxis ...
 
 PLUGINS:      eidos plugin list/install/run/show
               eidos <plugin-alias>   — top-level alias for an installed plugin
-              eidos learn            — bundled: praxis-turn → plugin
+              eidos learn            — praxis-turn → plugin; status/verify/finish
 
 GUIDE:        eidos guide [topic]    — this manual, recursive drill-down
 ```
@@ -53,7 +53,7 @@ The engine handles the structure; you handle the substance.
 ## The compounding layer
 
 Every `eidos do` loop writes a praxis turn — what changed, why. The
-bundled `learn` plugin promotes a praxis turn into a reusable plugin,
+first-class `learn` command promotes a praxis turn into a reusable plugin,
 landing it in `~/.eidos/plugins/`. The *next* eidos's PERCEIVE phase
 matches that plugin against its task and attaches the playbook to the
 context bundle. **One eidos's learning becomes every eidos's reflex.**

@@ -84,6 +84,7 @@ def _wire() -> None:
     from . import forges as _forges_cmd
     from . import guide as _guide_cmd
     from . import health as _health_cmd
+    from . import learn as _learn_cmd
     from . import mcp as _mcp_cmd
     from . import migrate as _migrate_cmd
     from . import plugin as _plugin_cmd
@@ -98,6 +99,7 @@ def _wire() -> None:
     _do_cmd.register(app)
     _spawn_cmd.register(app)
     _guide_cmd.register(app)
+    _learn_cmd.register(app)
 
     # Forge namespaces — direct access to the five forge libraries.
     _forges_cmd.register(app)

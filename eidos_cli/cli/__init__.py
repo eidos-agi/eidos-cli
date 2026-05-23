@@ -13,6 +13,8 @@ organized into:
 - **Migrate** (``eidos migrate``) — consolidates legacy
   ``.telos / .research / .governor / .docket / .hone`` directories into
   the unified ``.eidos/`` layout.
+- **Learn** (``eidos learn``) — wraps the bundled learn plugin to start,
+  inspect, verify, and finish plugin-promotion drafts.
 
 See ``eidos-philosophy/THE-EIDOS.md`` for the architecture this surface
 implements, and ``governor.md/.governor/adr/ADR-007`` for the commitment.

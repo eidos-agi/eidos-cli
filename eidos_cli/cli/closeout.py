@@ -165,7 +165,14 @@ def _plugin_runs_check(paths: list[Path]) -> dict:
                 result["incomplete"].append(
                     {
                         "path": str(run_dir),
+                        "status": "needs-draft",
                         "detail": "No draft outputs found. Continue/install the plugin draft or remove the run.",
+                        "suggestions": [
+                            f"eidos learn --status --work-dir {run_dir}",
+                            f"eidos learn --continue --work-dir {run_dir}",
+                            f"eidos learn --finish --work-dir {run_dir} --scope global",
+                            f"manual discard: remove {run_dir} only if the draft is intentionally abandoned",
+                        ],
                     }
                 )
 
@@ -205,6 +212,8 @@ def _format(report: dict) -> str:
     )
     for incomplete in runs.get("incomplete", [])[:10]:
         lines.append(f"  incomplete {incomplete['path']}: {incomplete['detail']}")
+        for suggestion in incomplete.get("suggestions", [])[:4]:
+            lines.append(f"    next: {suggestion}")
     return "\n".join(lines)
 
 
