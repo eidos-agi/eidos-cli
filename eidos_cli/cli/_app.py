@@ -16,7 +16,7 @@ app = typer.Typer(
         "\n"
         "eidos — unified agent surface for the Eidos scope architecture.\n"
         "\n"
-        "SCOPE:        eidos define ... | enter | status | activate | close | closeout | spawn | tick\n"
+        "SCOPE:        eidos define ... | enter | status | activate | close | closeout | ship | spawn | tick\n"
         "LOOP:         eidos do <task-id>          (PERCEIVE → CARDINALITY → … → LEARN)\n"
         "FORGES:       eidos telos ... | research ... | governor ... | docket ... | praxis ...\n"
         "PLUGINS:      eidos plugin list | install | run | show     |   eidos learn\n"
@@ -88,6 +88,7 @@ def _wire() -> None:
     from . import mcp as _mcp_cmd
     from . import migrate as _migrate_cmd
     from . import plugin as _plugin_cmd
+    from . import ship as _ship_cmd
     from . import scope as _scope_cmd
     from . import spawn as _spawn_cmd
     from . import vault as _vault_cmd
@@ -96,6 +97,7 @@ def _wire() -> None:
     _scope_cmd.register(app)
     _migrate_cmd.register(app)
     _closeout_cmd.register(app)
+    _ship_cmd.register(app)
     _do_cmd.register(app)
     _spawn_cmd.register(app)
     _guide_cmd.register(app)

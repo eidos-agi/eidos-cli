@@ -102,6 +102,7 @@ def _build_top_level_help() -> str:
             "  eidos activate <forge>        # scaffold a previously-dormant forge",
             "  eidos tick                    # praxis tick: emit steering snapshot",
             "  eidos closeout [<path>]       # prove repos/plugins are clean",
+            "  eidos ship [<path>]           # prove build/install/plugin/live shipment facets",
             "  eidos close <outcome>         # reached | abandoned | superseded",
             "",
             "FORGE NAMESPACES (direct forge access; eidos-aware path resolution):",

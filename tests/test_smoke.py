@@ -501,13 +501,82 @@ def test_closeout_catches_incomplete_plugin_run(tmp_path: Path):
     assert any("eidos learn --finish --work-dir" in s for s in suggestions)
 
 
+# ── ship ───────────────────────────────────────────────────────────────────
+
+
+def test_ship_passes_minimal_clean_repo_without_build(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+
+    proc = _run(["ship", str(repo), "--skip-build", "--skip-tests", "--skip-live", "--json"])
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["ok"] is True
+    assert any(g["id"] == "git-clean-pushed" and g["status"] == "pass" for g in payload["gates"])
+    assert any(g["id"] == "artifact-scan" and g["status"] == "pass" for g in payload["gates"])
+
+
+def test_ship_fails_on_generated_artifacts(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / "__pycache__").mkdir()
+
+    proc = _run(
+        ["ship", str(repo), "--skip-build", "--skip-tests", "--skip-live", "--no-clean", "--json"]
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    artifact_gate = next(g for g in payload["gates"] if g["id"] == "artifact-scan")
+    assert artifact_gate["status"] == "fail"
+    assert "__pycache__" in artifact_gate["artifacts"]
+
+
+def test_ship_catches_runtime_version_mismatch(tmp_path: Path):
+    repo = tmp_path / "repo"
+    pkg = repo / "src" / "demo_pkg"
+    pkg.mkdir(parents=True)
+    (repo / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[build-system]",
+                'requires = ["setuptools>=68.0"]',
+                'build-backend = "setuptools.build_meta"',
+                "",
+                "[project]",
+                'name = "demo-pkg"',
+                'version = "0.2.0"',
+                'requires-python = ">=3.10"',
+                "",
+                "[tool.setuptools.packages.find]",
+                'where = ["src"]',
+            ]
+        )
+    )
+    (pkg / "__init__.py").write_text('__version__ = "0.1.0"\n')
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "package"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--skip-tests", "--skip-live", "--json"])
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    wheel_gate = next(g for g in payload["gates"] if g["id"] == "wheel-install")
+    assert wheel_gate["status"] == "fail"
+    assert "metadata=0.2.0 runtime=0.1.0" in wheel_gate["stdout_tail"]
+
+
 # ── help / version sanity ──────────────────────────────────────────────────
 
 
 def test_top_level_help_lists_scope_verbs():
     proc = _run(["--help"])
     assert proc.returncode == 0
-    for verb in ("define", "enter", "status", "activate", "tick", "closeout", "close", "learn"):
+    for verb in ("define", "enter", "status", "activate", "tick", "closeout", "ship", "close", "learn"):
         assert verb in proc.stdout
 
 

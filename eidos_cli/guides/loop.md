@@ -51,6 +51,17 @@ current eidos/repo plus Codex marketplace plugin pointers. It is the final
 residue scan: dirty repos, unpushed commits, dangling plugin entries, and
 other cleanup work should be resolved before the loop is treated as closed.
 
+For release-shaped work, run shipment before closeout:
+
+```
+eidos ship <repo> --marketplace <marketplace-repo> --live-plugin <slug>
+```
+
+Shipment is facet-aware. It proves the source tree, Python package build,
+clean wheel install, CLI entrypoints, plugin validators, marketplace drift,
+installed Eidos plugin surface, and post-clean artifact state where those
+facets exist. Closeout then remains the final residue gate.
+
 ## The continuation envelope
 
 A hash of the per-task state (eidos id, task version, plan hash, SOR
