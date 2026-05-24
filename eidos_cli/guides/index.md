@@ -24,6 +24,7 @@ a one-line `.eidos-pointer` file back to the home.
 
 ```
 SCOPE:        eidos define <path>    — bring an eidos into being
+              eidos scope            — inspect scope resolution without requiring one
               eidos enter            — open a session, emit briefing
               eidos status           — one-line health snapshot
               eidos activate <forge> — scaffold a dormant forge

@@ -61,7 +61,108 @@ def _resolve_or_error(path: Optional[str]) -> Path:
     return home
 
 
+def _find_git_root(start: Path) -> Path | None:
+    cur = Path(start).expanduser().resolve()
+    while True:
+        if (cur / ".git").exists():
+            return cur
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+
+
+def _scope_report(start: Path) -> dict:
+    start = Path(start).expanduser().resolve()
+    home = resolve_home_from_path(start)
+    if home is not None:
+        eidos_dir = find_eidos_dir(home)
+        manifest = load_manifest(eidos_dir)
+        telos = load_telos(eidos_dir)
+        return {
+            "resolved": True,
+            "start": str(start),
+            "home": str(home),
+            "id": manifest.id if manifest else None,
+            "name": manifest.name if manifest else None,
+            "telos_statement": telos.statement if telos else None,
+            "active_forges": manifest.active_forges if manifest else [],
+            "member_count": len(manifest.members) if manifest else 0,
+            "reason": "resolved from .eidos or .eidos-pointer",
+            "candidates": [],
+            "actions": [
+                f"eidos enter {home}",
+                f"eidos status {home}",
+            ],
+        }
+
+    candidates: list[dict[str, str]] = []
+    git_root = _find_git_root(start)
+    if git_root is not None:
+        candidates.append(
+            {
+                "path": str(git_root),
+                "kind": "git_root",
+                "action": f"eidos define {git_root}",
+            }
+        )
+
+    define_target = git_root or start
+    return {
+        "resolved": False,
+        "start": str(start),
+        "home": None,
+        "id": None,
+        "name": None,
+        "telos_statement": None,
+        "active_forges": [],
+        "member_count": 0,
+        "reason": f"no .eidos or .eidos-pointer found at or above {start}",
+        "candidates": candidates,
+        "actions": [
+            f"eidos define {define_target}",
+            "eidos enter <existing-eidos-home>",
+        ],
+    }
+
+
 def register(app: typer.Typer) -> None:
+    @app.command("scope")
+    def cmd_scope(
+        path: Annotated[
+            Optional[str],
+            typer.Argument(help="Path to inspect. Defaults to CWD."),
+        ] = None,
+        json_: Annotated[
+            bool, typer.Option("--json", "-J", help="Compact JSON output.")
+        ] = False,
+    ) -> None:
+        """Inspect Eidos scope resolution without requiring one to exist."""
+        from ._app import emit
+
+        report = _scope_report(Path(path) if path else Path.cwd())
+        if json_:
+            emit(report, json_mode=True)
+            return
+
+        if report["resolved"]:
+            lines = [
+                "scope: resolved",
+                f"home: {report['home']}",
+                f"name: {report['name']}",
+                f"id: {report['id']}",
+                f"telos: {report['telos_statement'] or '(missing)'}",
+                "actions:",
+            ]
+        else:
+            lines = [
+                "scope: unresolved",
+                f"start: {report['start']}",
+                f"reason: {report['reason']}",
+                "actions:",
+            ]
+        lines.extend(f"  - {action}" for action in report["actions"])
+        emit("\n".join(lines), json_mode=False)
+
     @app.command("define")
     def cmd_define(
         path: Annotated[

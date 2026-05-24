@@ -78,6 +78,7 @@ Useful entrypoints:
 eidos --help
 eidos guide
 eidos guide loop
+eidos scope --json
 eidos status
 eidos health
 eidos do <task-id>

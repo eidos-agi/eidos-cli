@@ -169,6 +169,28 @@ def test_status_reports_forge_states(temp_eidos):
     assert states["research"] == "dormant"
 
 
+def test_scope_reports_missing_eidos_without_failure(tmp_path):
+    proc = _run(["scope", "--json"], cwd=tmp_path)
+    assert proc.returncode == 0
+    data = json.loads(proc.stdout)
+    assert data["resolved"] is False
+    assert data["home"] is None
+    assert "no .eidos or .eidos-pointer" in data["reason"]
+    assert any("eidos define" in action for action in data["actions"])
+
+
+def test_scope_reports_resolved_eidos(temp_eidos):
+    home, manifest = temp_eidos
+    inside = home / ".eidos" / "docket"
+    proc = _run(["scope", "--json"], cwd=inside)
+    assert proc.returncode == 0
+    data = json.loads(proc.stdout)
+    assert data["resolved"] is True
+    assert data["home"] == str(home)
+    assert data["name"] == manifest["name"]
+    assert data["id"] == manifest["id"]
+
+
 # ── activate ───────────────────────────────────────────────────────────────
 
 

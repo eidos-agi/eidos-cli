@@ -31,6 +31,7 @@ Orient:
 
 ```bash
 eidos guide
+eidos scope --json
 eidos status
 eidos health
 ```
@@ -125,6 +126,7 @@ Restart Codex after editing config.
 ```bash
 eidos guide
 eidos --help
+eidos scope --json
 eidos status
 eidos health
 eidos do --help
