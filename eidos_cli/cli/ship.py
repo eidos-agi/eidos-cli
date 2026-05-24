@@ -600,12 +600,13 @@ def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
                 cwd=str(repo),
             )
         ]
+    neutral_cwd = Path(tempfile.gettempdir())
     return [
         _command_gate(
             "eidos-plugin-show",
             "eidos-plugin",
             ["eidos", "plugin", "show", slug],
-            cwd=repo,
+            cwd=neutral_cwd,
             timeout=60,
             pass_detail="Installed Eidos plugin is visible.",
             fail_detail="Installed Eidos plugin is not visible.",
@@ -614,7 +615,7 @@ def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
             "eidos-plugin-run",
             "eidos-plugin",
             ["eidos", "plugin", "run", slug, "--json"],
-            cwd=repo,
+            cwd=neutral_cwd,
             timeout=60,
             pass_detail="Installed Eidos plugin run path responds.",
             fail_detail="Installed Eidos plugin run path failed.",
