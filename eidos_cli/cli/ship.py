@@ -34,6 +34,22 @@ ARTIFACT_NAMES = {
     "build",
 }
 
+BUILTIN_GATE_IDS = {
+    "git-clean-pushed",
+    "artifact-scan",
+    "python-tests",
+    "python-build",
+    "twine-check",
+    "wheel-install",
+    "entrypoints",
+    "codex-plugin-validator",
+    "felix-plugin-doctor",
+    "marketplace-check",
+    "eidos-plugin-show",
+    "eidos-plugin-run",
+    "post-clean-artifact-scan",
+}
+
 
 @dataclass
 class Gate:
@@ -157,6 +173,70 @@ def _load_pyproject(repo: Path) -> dict[str, Any] | None:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_ship_manifest(repo: Path) -> tuple[Path | None, dict[str, Any]]:
+    path = repo / ".eidos" / "ship" / "manifest.toml"
+    if not path.is_file():
+        return None, {}
+    return path, tomllib.loads(path.read_text(encoding="utf-8"))
+
+
+def _list_value(raw: Any) -> list[str]:
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        return [str(item) for item in raw]
+    return []
+
+
+def _manifest_table(manifest: dict[str, Any], key: str) -> dict[str, Any]:
+    value = manifest.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _manifest_repo(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "repo")
+
+
+def _manifest_artifacts(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "artifacts")
+
+
+def _manifest_learnings(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "learnings")
+
+
+def _manifest_builtin_gate_ids(manifest: dict[str, Any]) -> list[str] | None:
+    gates = _manifest_table(manifest, "gates")
+    raw = gates.get("builtin")
+    if raw is None:
+        return None
+    ids = _list_value(raw)
+    unknown = sorted(set(ids) - BUILTIN_GATE_IDS)
+    if unknown:
+        raise ValueError(f"unknown built-in ship gate(s) in manifest: {', '.join(unknown)}")
+    return ids
+
+
+def _manifest_custom_gates(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = manifest.get("custom_gate")
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise ValueError("[[custom_gate]] entries must be TOML tables")
+    gates: list[dict[str, Any]] = []
+    for idx, item in enumerate(raw, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"custom_gate #{idx} must be a TOML table")
+        if not item.get("id"):
+            raise ValueError(f"custom_gate #{idx} is missing id")
+        if not item.get("command"):
+            raise ValueError(f"custom_gate {item.get('id')} is missing command")
+        gates.append(item)
+    return gates
+
+
 def _project_name(pyproject: dict[str, Any]) -> str | None:
     project = pyproject.get("project")
     return project.get("name") if isinstance(project, dict) else None
@@ -174,20 +254,37 @@ def _scripts(pyproject: dict[str, Any]) -> dict[str, str]:
     return scripts if isinstance(scripts, dict) else {}
 
 
-def _find_artifacts(repo: Path) -> list[str]:
+def _artifact_names(manifest: dict[str, Any]) -> set[str]:
+    artifacts = _manifest_artifacts(manifest)
+    names = set(ARTIFACT_NAMES)
+    names.update(_list_value(artifacts.get("generated_names")))
+    names.difference_update(_list_value(artifacts.get("allow_names")))
+    return names
+
+
+def _find_artifacts(repo: Path, manifest: dict[str, Any] | None = None) -> list[str]:
+    manifest = manifest or {}
+    artifact_names = _artifact_names(manifest)
+    artifact_paths = set(_list_value(_manifest_artifacts(manifest).get("generated_paths")))
     matches: list[str] = []
     for path in repo.rglob("*"):
         rel = path.relative_to(repo)
         parts = set(rel.parts)
         if ".git" in parts:
             continue
-        if path.name in ARTIFACT_NAMES or path.name.endswith(".egg-info"):
+        rel_text = str(rel)
+        if (
+            path.name in artifact_names
+            or path.name.endswith(".egg-info")
+            or rel_text in artifact_paths
+        ):
             matches.append(str(rel))
     return sorted(matches)[:200]
 
 
-def _clean_artifacts(repo: Path) -> None:
-    for name in ARTIFACT_NAMES:
+def _clean_artifacts(repo: Path, manifest: dict[str, Any] | None = None) -> None:
+    manifest = manifest or {}
+    for name in _artifact_names(manifest):
         for path in list(repo.rglob(name)):
             if ".git" in path.relative_to(repo).parts:
                 continue
@@ -202,10 +299,16 @@ def _clean_artifacts(repo: Path) -> None:
             shutil.rmtree(egg_info, ignore_errors=True)
         else:
             egg_info.unlink(missing_ok=True)
+    for rel in _list_value(_manifest_artifacts(manifest).get("generated_paths")):
+        path = repo / rel
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+        elif path.exists():
+            path.unlink(missing_ok=True)
 
 
-def _artifact_gate(repo: Path) -> Gate:
-    artifacts = _find_artifacts(repo)
+def _artifact_gate(repo: Path, manifest: dict[str, Any] | None = None) -> Gate:
+    artifacts = _find_artifacts(repo, manifest)
     return Gate(
         id="artifact-scan",
         facet="workspace",
@@ -466,6 +569,24 @@ def _marketplace_check_gate(repo: Path, marketplace: Path | None) -> Gate:
     )
 
 
+def _custom_gate(repo: Path, item: dict[str, Any]) -> Gate:
+    command = item["command"]
+    cmd = command if isinstance(command, list) else ["bash", "--noprofile", "--norc", "-lc", str(command)]
+    cwd_raw = item.get("cwd")
+    cwd = (repo / str(cwd_raw)).resolve() if cwd_raw else repo
+    env = {str(k): str(v) for k, v in (item.get("env") or {}).items()}
+    return _command_gate(
+        str(item["id"]),
+        str(item.get("facet") or "custom"),
+        [str(part) for part in cmd],
+        cwd=cwd,
+        timeout=int(item.get("timeout") or 120),
+        env=env,
+        pass_detail=str(item.get("pass_detail") or "Custom shipment gate passed."),
+        fail_detail=str(item.get("fail_detail") or "Custom shipment gate failed."),
+    )
+
+
 def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
     if not slug:
         return []
@@ -501,8 +622,8 @@ def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
     ]
 
 
-def _write_evidence(repo: Path, report: dict[str, Any]) -> Path:
-    evidence_dir = repo / ".eidos" / "shipments"
+def _write_evidence(repo: Path, report: dict[str, Any], manifest: dict[str, Any] | None = None) -> Path:
+    evidence_dir = repo / str(_manifest_table(manifest or {}, "evidence").get("path") or ".eidos/ship/shipments")
     evidence_dir.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     path = evidence_dir / f"shipment-{stamp}.json"
@@ -521,6 +642,27 @@ def build_report(
     clean: bool = True,
 ) -> dict[str, Any]:
     repo = repo.expanduser().resolve()
+    manifest_path, manifest = _load_ship_manifest(repo)
+    repo_manifest = _manifest_repo(manifest)
+    gates_manifest = _manifest_table(manifest, "gates")
+    if marketplace is None and repo_manifest.get("marketplace"):
+        marketplace = (repo / str(repo_manifest["marketplace"])).expanduser().resolve()
+    if live_plugin is None and repo_manifest.get("live_plugin"):
+        live_plugin = str(repo_manifest["live_plugin"])
+    if repo_manifest.get("skip_tests") is not None:
+        skip_tests = bool(repo_manifest["skip_tests"])
+    if repo_manifest.get("skip_build") is not None:
+        skip_build = bool(repo_manifest["skip_build"])
+    if repo_manifest.get("skip_live") is not None:
+        skip_live = bool(repo_manifest["skip_live"])
+    if repo_manifest.get("clean") is not None:
+        clean = bool(repo_manifest["clean"])
+    builtin_gate_ids = _manifest_builtin_gate_ids(manifest)
+    include_all_builtins = builtin_gate_ids is None
+
+    def wants(gate_id: str) -> bool:
+        return include_all_builtins or gate_id in (builtin_gate_ids or [])
+
     pyproject = _load_pyproject(repo)
     project_name = _project_name(pyproject) if pyproject else None
     facets = ["workspace"]
@@ -533,47 +675,67 @@ def build_report(
     if live_plugin:
         facets.append("eidos-plugin")
 
-    gates: list[Gate] = [_git_gate(repo)]
-    initial_artifacts = _find_artifacts(repo)
-    if initial_artifacts and clean:
-        gates.append(
-            Gate(
-                id="pre-clean-artifact-scan",
-                facet="workspace",
-                status="pass",
-                detail="Generated artifacts were found before shipment and cleaned before gates ran.",
-                cwd=str(repo),
-                artifacts=initial_artifacts,
+    gates: list[Gate] = []
+    if wants("git-clean-pushed"):
+        gates.append(_git_gate(repo))
+    if wants("artifact-scan"):
+        initial_artifacts = _find_artifacts(repo, manifest)
+        if initial_artifacts and clean:
+            gates.append(
+                Gate(
+                    id="pre-clean-artifact-scan",
+                    facet="workspace",
+                    status="pass",
+                    detail="Generated artifacts were found before shipment and cleaned before gates ran.",
+                    cwd=str(repo),
+                    artifacts=initial_artifacts,
+                )
             )
-        )
-        _clean_artifacts(repo)
-    else:
-        gates.append(_artifact_gate(repo))
+            _clean_artifacts(repo, manifest)
+        else:
+            gates.append(_artifact_gate(repo, manifest))
     if pyproject and project_name:
-        if not skip_tests:
+        if not skip_tests and wants("python-tests"):
             gates.append(_python_test_gate(repo, project_name))
-        if not skip_build:
+        if not skip_build and wants("python-build"):
             gates.append(_build_gate(repo))
+        if not skip_build and wants("twine-check"):
             gates.append(_twine_gate(repo))
+        if not skip_build and wants("wheel-install"):
             gates.append(_wheel_install_gate(repo, project_name))
-        gates.extend(_entrypoint_gates(repo, pyproject))
-    gates.append(_codex_plugin_gate(repo))
-    gates.append(_felix_plugin_gate(repo))
-    gates.append(_marketplace_check_gate(repo, marketplace.expanduser().resolve() if marketplace else None))
+        if wants("entrypoints"):
+            gates.extend(_entrypoint_gates(repo, pyproject))
+    if wants("codex-plugin-validator"):
+        gates.append(_codex_plugin_gate(repo))
+    if wants("felix-plugin-doctor"):
+        gates.append(_felix_plugin_gate(repo))
+    if wants("marketplace-check"):
+        gates.append(_marketplace_check_gate(repo, marketplace.expanduser().resolve() if marketplace else None))
     if not skip_live:
-        gates.extend(_live_plugin_gate(live_plugin, repo))
+        live_gates = _live_plugin_gate(live_plugin, repo)
+        if wants("eidos-plugin-show"):
+            gates.extend(live_gates[:1])
+        if wants("eidos-plugin-run"):
+            gates.extend(live_gates[1:])
+    for item in _manifest_custom_gates(manifest):
+        gates.append(_custom_gate(repo, item))
 
-    if clean:
-        _clean_artifacts(repo)
-        post_artifacts = _artifact_gate(repo)
+    if clean and wants("post-clean-artifact-scan"):
+        _clean_artifacts(repo, manifest)
+        post_artifacts = _artifact_gate(repo, manifest)
         post_artifacts.id = "post-clean-artifact-scan"
         gates.append(post_artifacts)
 
     payload = {
         "ok": all(g.ok for g in gates),
         "repo": str(repo),
+        "manifest": str(manifest_path) if manifest_path else None,
+        "shipment_style": repo_manifest.get("style"),
         "facets": sorted(set(facets)),
         "project": {"name": project_name, "scripts": sorted(_scripts(pyproject).keys()) if pyproject else []},
+        "do_not": _list_value(_manifest_learnings(manifest).get("do_not")),
+        "yes": _list_value(_manifest_learnings(manifest).get("yes")),
+        "notes": _list_value(_manifest_learnings(manifest).get("notes")),
         "gates": [g.to_dict() for g in gates],
     }
     return payload
@@ -583,6 +745,7 @@ def _format(report: dict[str, Any]) -> str:
     lines = [
         f"Shipment verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}",
         f"Repo: {report['repo']}",
+        f"Manifest: {report.get('manifest') or 'none (auto-discovered gates)'}",
         f"Facets: {', '.join(report['facets'])}",
         "",
         "Gates:",
@@ -594,6 +757,9 @@ def _format(report: dict[str, Any]) -> str:
             lines.append(f"  cmd: {' '.join(gate['command'])}")
         if gate.get("artifacts"):
             lines.append(f"  artifacts: {', '.join(gate['artifacts'][:8])}")
+    if report.get("do_not"):
+        lines.extend(["", "Do Not:"])
+        lines.extend(f"- {item}" for item in report["do_not"])
     return "\n".join(lines)
 
 
@@ -621,11 +787,17 @@ def register(app: typer.Typer) -> None:
         ] = False,
         write_evidence: Annotated[
             bool,
-            typer.Option("--write-evidence", help="Write the shipment report to .eidos/shipments/."),
+            typer.Option("--write-evidence", help="Write the shipment report to .eidos/ship/shipments/."),
         ] = False,
         json_: Annotated[bool, typer.Option("--json", "-J", help="Compact JSON output.")] = False,
     ) -> None:
-        """Run a facet-aware shipment gate and fail closed on weak proof."""
+        """Run a manifest-aware shipment gate.
+
+        If `.eidos/ship/manifest.toml` exists, Eidos uses it as the repo-local
+        source of truth for shipment gates, defaults, artifact policy, evidence
+        storage, and yes/do-not learning. Without a manifest, Eidos falls back
+        to auto-discovered generic gates.
+        """
 
         repo = Path(path).expanduser().resolve() if path else Path.cwd().resolve()
         report = build_report(
@@ -637,8 +809,10 @@ def register(app: typer.Typer) -> None:
             skip_live=skip_live,
             clean=not no_clean,
         )
-        if write_evidence:
-            evidence = _write_evidence(repo, report)
+        _, manifest = _load_ship_manifest(repo)
+        evidence_manifest = _manifest_table(manifest, "evidence")
+        if write_evidence or bool(evidence_manifest.get("auto_write")):
+            evidence = _write_evidence(repo, report, manifest)
             report["evidence_path"] = str(evidence)
         typer.echo(json.dumps(report, indent=2, default=str) if json_ else _format(report))
         if not report["ok"]:

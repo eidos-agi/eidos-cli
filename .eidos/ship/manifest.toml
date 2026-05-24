@@ -1,0 +1,70 @@
+[repo]
+style = "cli-first private-dependency shipment"
+clean = true
+skip_tests = true
+skip_build = true
+skip_live = true
+
+[gates]
+builtin = [
+  "git-clean-pushed",
+  "artifact-scan",
+  "post-clean-artifact-scan",
+]
+
+[artifacts]
+generated_names = [
+  ".venv",
+  "__pycache__",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".build",
+  "dist",
+  "build",
+]
+
+[evidence]
+auto_write = true
+path = ".eidos/ship/shipments"
+
+[learnings]
+yes = [
+  "Use the installed pyenv 3.12.7 Eidos environment for live CLI verification.",
+  "Run the full pytest suite from this checkout before pushing Eidos CLI changes.",
+  "Verify eidos --help and eidos ship --help after changing command registration.",
+  "Run eidos closeout as the final residue gate after committing and pushing.",
+]
+do_not = [
+  "Do not use uv run as the Eidos CLI proof path here; private forge dependencies are installed in pyenv 3.12.7 and may not resolve from public indexes.",
+  "Do not claim a shipment from source tests alone; verify the installed eidos command surface too.",
+  "Do not treat ignored __pycache__ or .pytest_cache residue as acceptable final state.",
+  "Do not overwrite existing local commits; preserve and push the current stack.",
+]
+notes = [
+  "This repo's shipment style is CLI runtime first, not PyPI publication first.",
+  "Wheel/install gates can be added after all private forge dependencies have a resolvable package source.",
+]
+
+[[custom_gate]]
+id = "pytest-installed-env"
+facet = "test"
+command = "PYENV_VERSION=3.12.7 PYTHONPYCACHEPREFIX=/tmp/eidos-cli-pycache PYTHONDONTWRITEBYTECODE=1 pytest -q"
+timeout = 120
+pass_detail = "Full Eidos CLI smoke suite passed in the installed pyenv environment."
+fail_detail = "Full Eidos CLI smoke suite failed."
+
+[[custom_gate]]
+id = "installed-eidos-help"
+facet = "cli"
+command = "PYENV_VERSION=3.12.7 eidos --help | grep -q 'ship'"
+timeout = 30
+pass_detail = "Installed eidos help exposes the ship command."
+fail_detail = "Installed eidos help does not expose the ship command."
+
+[[custom_gate]]
+id = "installed-ship-help"
+facet = "cli"
+command = "PYENV_VERSION=3.12.7 eidos ship --help | grep -q 'manifest'"
+timeout = 30
+pass_detail = "Installed eidos ship help exposes manifest-aware shipment behavior."
+fail_detail = "Installed eidos ship help did not expose manifest-aware shipment behavior."

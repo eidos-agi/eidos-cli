@@ -570,6 +570,89 @@ def test_ship_catches_runtime_version_mismatch(tmp_path: Path):
     assert "metadata=0.2.0 runtime=0.1.0" in wheel_gate["stdout_tail"]
 
 
+def test_ship_uses_repo_local_manifest(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                'style = "minimal-test-shipment"',
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed", "artifact-scan", "post-clean-artifact-scan"]',
+                "",
+                "[learnings]",
+                'do_not = ["do not run package gates for this fixture"]',
+                'yes = ["ship by proving git cleanliness and artifact cleanliness"]',
+                "",
+                "[evidence]",
+                "auto_write = true",
+            ]
+        )
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "ship manifest"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["manifest"].endswith(".eidos/ship/manifest.toml")
+    assert payload["shipment_style"] == "minimal-test-shipment"
+    assert payload["evidence_path"].endswith(".eidos/ship/shipments/" + Path(payload["evidence_path"]).name)
+    assert Path(payload["evidence_path"]).is_file()
+    assert payload["do_not"] == ["do not run package gates for this fixture"]
+    assert [g["id"] for g in payload["gates"]] == [
+        "git-clean-pushed",
+        "artifact-scan",
+        "post-clean-artifact-scan",
+    ]
+
+
+def test_ship_runs_manifest_custom_gate(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed"]',
+                "",
+                "[[custom_gate]]",
+                'id = "repo-specific-proof"',
+                'facet = "custom"',
+                'command = "test -f README.md"',
+                'pass_detail = "README proof exists."',
+                'fail_detail = "README proof missing."',
+            ]
+        )
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "custom manifest"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    custom = next(g for g in payload["gates"] if g["id"] == "repo-specific-proof")
+    assert custom["status"] == "pass"
+
+
 # ── help / version sanity ──────────────────────────────────────────────────
 
 

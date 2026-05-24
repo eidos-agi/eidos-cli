@@ -62,6 +62,18 @@ clean wheel install, CLI entrypoints, plugin validators, marketplace drift,
 installed Eidos plugin surface, and post-clean artifact state where those
 facets exist. Closeout then remains the final residue gate.
 
+Each repo can teach Eidos its own shipment style with:
+
+```
+.eidos/ship/manifest.toml
+```
+
+The manifest selects built-in gates, adds repo-specific command gates, sets
+marketplace/live-plugin defaults, records artifact cleanup policy, and keeps
+durable `yes` / `do_not` learning so future shipments remember what worked and
+what must not be repeated. Shipment evidence belongs under
+`.eidos/ship/shipments/`.
+
 ## The continuation envelope
 
 A hash of the per-task state (eidos id, task version, plan hash, SOR
