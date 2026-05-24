@@ -72,6 +72,8 @@ eidos closeout
 
 Closeout is read-only. It checks whether relevant git repos are clean and pushed, and whether Codex marketplace entries point at real plugin bundles. If it fails, report the residue and fix it before claiming the loop is closed.
 
+`eidos ship` is also a one-shot evidence gate, not a repair loop. It may tell the agent what to do next, but it must not spawn subagents, run repair agents, or recurse. If review or repair work is needed, do it outside `ship`, then rerun `ship` once to verify the new state.
+
 Useful entrypoints:
 
 ```bash

@@ -62,6 +62,11 @@ clean wheel install, CLI entrypoints, plugin validators, marketplace drift,
 installed Eidos plugin surface, and post-clean artifact state where those
 facets exist. Closeout then remains the final residue gate.
 
+Shipment is a one-shot gate, not a repair loop. `eidos ship` observes,
+verifies, reports, and writes evidence; it does not spawn reviewers, invoke
+subagents, repair code, or recurse. If a reviewer or repair agent is needed,
+run that outside `ship`, then rerun `ship` once to verify the new state.
+
 Each repo can teach Eidos its own shipment style with:
 
 ```
@@ -73,6 +78,9 @@ marketplace/live-plugin defaults, records artifact cleanup policy, and keeps
 durable `yes` / `do_not` learning so future shipments remember what worked and
 what must not be repeated. Shipment evidence belongs under
 `.eidos/ship/shipments/`.
+
+Custom gates must be deterministic command gates. Agent/subagent gate kinds are
+rejected so shipment cannot accidentally become an endless self-repair loop.
 
 Repos that use StepProof can require shipment to prove the StepProof audit
 stream too:

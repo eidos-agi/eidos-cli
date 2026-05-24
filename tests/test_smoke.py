@@ -609,6 +609,9 @@ def test_ship_passes_minimal_clean_repo_without_build(tmp_path: Path):
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
     assert payload["ok"] is True
+    assert payload["agent_contract"]["role"] == "one-shot shipment gate"
+    assert payload["agent_contract"]["invokes_subagents"] is False
+    assert payload["agent_contract"]["max_repair_iterations"] == 0
     assert any(g["id"] == "git-clean-pushed" and g["status"] == "pass" for g in payload["gates"])
     assert any(g["id"] == "artifact-scan" and g["status"] == "pass" for g in payload["gates"])
 
@@ -746,6 +749,39 @@ def test_ship_runs_manifest_custom_gate(tmp_path: Path):
     payload = json.loads(proc.stdout)
     custom = next(g for g in payload["gates"] if g["id"] == "repo-specific-proof")
     assert custom["status"] == "pass"
+
+
+def test_ship_rejects_agent_custom_gate_kind(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed"]',
+                "",
+                "[[custom_gate]]",
+                'id = "agent-review"',
+                'kind = "agent-review"',
+                'command = "echo review"',
+            ]
+        )
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "agent gate"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode != 0
+    assert "agent/subagent gates are not allowed" in (proc.stderr + proc.stdout)
 
 
 def test_ship_fails_when_required_stepproof_unavailable(tmp_path: Path):

@@ -52,6 +52,31 @@ BUILTIN_GATE_IDS = {
     "post-clean-artifact-scan",
 }
 
+AGENT_CONTRACT = {
+    "role": "one-shot shipment gate",
+    "invokes_subagents": False,
+    "max_repair_iterations": 0,
+    "repair_policy": (
+        "Ship observes, verifies, reports, and writes evidence. It may suggest "
+        "next actions, but it must not spawn reviewers or repair agents."
+    ),
+    "loop_stop": (
+        "A caller may run ship again after separate human or agent work, but "
+        "ship itself does not recurse."
+    ),
+}
+
+AGENT_GATE_KINDS = {
+    "agent",
+    "agent-review",
+    "agent-repair",
+    "review-agent",
+    "repair-agent",
+    "subagent",
+    "subagent-review",
+    "subagent-repair",
+}
+
 
 @dataclass
 class Gate:
@@ -239,6 +264,13 @@ def _manifest_custom_gates(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             raise ValueError(f"custom_gate #{idx} is missing id")
         if not item.get("command"):
             raise ValueError(f"custom_gate {item.get('id')} is missing command")
+        kind = str(item.get("kind") or "").strip().lower()
+        if kind in AGENT_GATE_KINDS:
+            raise ValueError(
+                f"custom_gate {item.get('id')} declares kind={kind!r}; "
+                "agent/subagent gates are not allowed in eidos ship. "
+                "Run reviewers or repair agents outside ship, then rerun ship once."
+            )
         gates.append(item)
     return gates
 
@@ -778,6 +810,7 @@ def build_report(
         "repo": str(repo),
         "manifest": str(manifest_path) if manifest_path else None,
         "shipment_style": repo_manifest.get("style"),
+        "agent_contract": AGENT_CONTRACT,
         "facets": sorted(set(facets)),
         "project": {"name": project_name, "scripts": sorted(_scripts(pyproject).keys()) if pyproject else []},
         "do_not": _list_value(_manifest_learnings(manifest).get("do_not")),
@@ -804,6 +837,18 @@ def _format(report: dict[str, Any]) -> str:
             lines.append(f"  cmd: {' '.join(gate['command'])}")
         if gate.get("artifacts"):
             lines.append(f"  artifacts: {', '.join(gate['artifacts'][:8])}")
+    if report.get("agent_contract"):
+        contract = report["agent_contract"]
+        lines.extend(
+            [
+                "",
+                "Agent Contract:",
+                f"- role: {contract['role']}",
+                f"- invokes_subagents: {contract['invokes_subagents']}",
+                f"- max_repair_iterations: {contract['max_repair_iterations']}",
+                f"- repair_policy: {contract['repair_policy']}",
+            ]
+        )
     if report.get("do_not"):
         lines.extend(["", "Do Not:"])
         lines.extend(f"- {item}" for item in report["do_not"])

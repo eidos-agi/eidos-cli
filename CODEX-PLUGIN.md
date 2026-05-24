@@ -56,6 +56,8 @@ The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context 
 
 `eidos closeout` is the final cleanup gate. It is read-only and checks for dirty repos, unpushed commits, and dangling Codex marketplace plugin entries before the agent says the mission is closed.
 
+`eidos ship` is a one-shot shipment gate, not a repair loop. It can report what proof failed and what the agent should do next, but it does not spawn reviewers, run subagents, modify code, or recurse. Run any reviewer or repair agent outside `ship`, then rerun `ship` once to verify the result.
+
 ## Non-Goal
 
 This plugin does not do the work itself. It starts and closes the loop around the work.
