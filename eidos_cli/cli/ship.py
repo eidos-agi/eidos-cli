@@ -611,16 +611,33 @@ def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
             pass_detail="Installed Eidos plugin is visible.",
             fail_detail="Installed Eidos plugin is not visible.",
         ),
-        _command_gate(
-            "eidos-plugin-run",
-            "eidos-plugin",
-            ["eidos", "plugin", "run", slug, "--json"],
-            cwd=neutral_cwd,
-            timeout=60,
-            pass_detail="Installed Eidos plugin run path responds.",
-            fail_detail="Installed Eidos plugin run path failed.",
-        ),
+        _eidos_plugin_run_gate(slug, neutral_cwd),
     ]
+
+
+def _eidos_plugin_run_gate(slug: str, cwd: Path) -> Gate:
+    cmd = ["eidos", "plugin", "run", slug, "--json"]
+    gate = _command_gate(
+        "eidos-plugin-run",
+        "eidos-plugin",
+        cmd,
+        cwd=cwd,
+        timeout=60,
+        pass_detail="Installed Eidos plugin run path responds.",
+        fail_detail="Installed Eidos plugin run path failed.",
+    )
+    if not gate.ok or not gate.stdout_tail:
+        return gate
+    try:
+        payload = json.loads(gate.stdout_tail)
+    except json.JSONDecodeError:
+        return gate
+    work_dir = payload.get("work_dir")
+    if isinstance(work_dir, str):
+        shutil.rmtree(work_dir, ignore_errors=True)
+        gate.data["work_dir"] = work_dir
+        gate.data["work_dir_cleaned"] = True
+    return gate
 
 
 def _write_evidence(repo: Path, report: dict[str, Any], manifest: dict[str, Any] | None = None) -> Path:
