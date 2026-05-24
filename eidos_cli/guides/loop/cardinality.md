@@ -21,6 +21,10 @@ CARDINALITY escalates Solo → Pair → Pod when any of these fire:
    unspecified targets, or multiple defensible interpretations.
 4. **Undocumented** — required guardrails or SOPs are missing for the
    operation's owner_forge.
+5. **StepProof required** — migrations, production deploys, secret
+   rotation, irreversible/regulated workflows, or explicit
+   `stepproof`/`ceremony` language require verifier-gated StepProof
+   evidence.
 
 ## Solo-never-floor list
 
@@ -54,3 +58,8 @@ The CardinalityDecision is included in the context bundle:
 
 And recorded in the continuation envelope so VERIFY can fail-closed on
 Solo-never-floor + Solo + uncertainty per ADR-008.
+
+When `requires_step_proof` is true, the substrate must run ACT under
+StepProof ceremony and attach StepProof audit evidence before
+`eidos do --continue`. Eidos records the requirement; it does not create
+the StepProof run automatically in v1.

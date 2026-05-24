@@ -74,6 +74,23 @@ durable `yes` / `do_not` learning so future shipments remember what worked and
 what must not be repeated. Shipment evidence belongs under
 `.eidos/ship/shipments/`.
 
+Repos that use StepProof can require shipment to prove the StepProof audit
+stream too:
+
+```
+[gates]
+builtin = ["git-clean-pushed", "stepproof-audit", "post-clean-artifact-scan"]
+
+[stepproof]
+required = true
+audit = true
+metrics = true
+```
+
+StepProof remains a specialist enforcement layer, not a default dependency.
+Use it for ceremony-bound, high-stakes, or regulated work where each step
+must advance only after independent verifier evidence.
+
 ## The continuation envelope
 
 A hash of the per-task state (eidos id, task version, plan hash, SOR

@@ -10,6 +10,7 @@ from typing import Annotated, Optional
 
 import typer
 
+from .. import stepproof
 from ..scope.manifest import load_manifest
 from ..scope.resolver import resolve_from_cwd, resolve_home_from_path
 
@@ -214,6 +215,19 @@ def _format(report: dict) -> str:
         lines.append(f"  incomplete {incomplete['path']}: {incomplete['detail']}")
         for suggestion in incomplete.get("suggestions", [])[:4]:
             lines.append(f"    next: {suggestion}")
+    lines.extend(["", "StepProof:"])
+    for sp in report.get("stepproof", []):
+        marker = "PASS" if sp["ok"] else "FAIL"
+        lines.append(f"- {marker} {sp['path']}")
+        lines.append(
+            f"  status={sp.get('status')} installed={sp.get('installed')} "
+            f"runs={sp.get('runs_count', 0)} detail={sp.get('detail')}"
+        )
+        active = sp.get("active_run") or {}
+        if active:
+            lines.append(
+                f"  active_run={active.get('run_id')} step={active.get('current_step') or '-'}"
+            )
     return "\n".join(lines)
 
 
@@ -226,12 +240,19 @@ def build_report(path: Optional[str], repos: list[str], include_codex_marketplac
         else {"kind": "codex-marketplace", "ok": True, "status": "skipped"}
     )
     plugin_runs = _plugin_runs_check(repo_paths)
-    ok = all(check["ok"] for check in git_checks) and codex_marketplace["ok"] and plugin_runs["ok"]
+    stepproof_checks = [stepproof.check_repo(p) for p in repo_paths]
+    ok = (
+        all(check["ok"] for check in git_checks)
+        and codex_marketplace["ok"]
+        and plugin_runs["ok"]
+        and all(check["ok"] for check in stepproof_checks)
+    )
     return {
         "ok": ok,
         "git": git_checks,
         "codex_marketplace": codex_marketplace,
         "plugin_runs": plugin_runs,
+        "stepproof": stepproof_checks,
     }
 
 

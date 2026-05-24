@@ -19,9 +19,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -418,6 +420,35 @@ def _init_git_repo(path: Path) -> None:
     subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True, text=True)
 
 
+def _path_with_fakebin(fakebin: Path) -> str:
+    eidos_path = shutil.which(EIDOS)
+    assert eidos_path
+    return os.pathsep.join([str(fakebin), str(Path(eidos_path).parent), os.environ.get("PATH", "")])
+
+
+def _write_fake_stepproof(fakebin: Path, *, audit_exit: int = 0, metrics: str = '{"ok": true}') -> None:
+    fakebin.mkdir(parents=True, exist_ok=True)
+    script = fakebin / "stepproof"
+    script.write_text(
+        "\n".join(
+            [
+                "#!/bin/sh",
+                'if [ "$1" = "audit" ] && [ "$2" = "verify" ]; then',
+                f"  echo audit-{audit_exit}",
+                f"  exit {audit_exit}",
+                "fi",
+                'if [ "$1" = "metrics" ] && [ "$2" = "--json" ]; then',
+                f"  printf '%s\\n' '{metrics}'",
+                "  exit 0",
+                "fi",
+                "exit 2",
+            ]
+        )
+        + "\n"
+    )
+    script.chmod(0o755)
+
+
 def test_closeout_passes_for_clean_repo(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -432,6 +463,7 @@ def test_closeout_passes_for_clean_repo(tmp_path: Path):
     payload = json.loads(proc.stdout)
     assert payload["ok"] is True
     assert payload["git"][0]["clean"] is True
+    assert payload["stepproof"][0]["status"] == "absent"
 
 
 def test_closeout_fails_for_dirty_repo(tmp_path: Path):
@@ -499,6 +531,47 @@ def test_closeout_catches_incomplete_plugin_run(tmp_path: Path):
     suggestions = payload["plugin_runs"]["incomplete"][0]["suggestions"]
     assert any("eidos learn --status --work-dir" in s for s in suggestions)
     assert any("eidos learn --finish --work-dir" in s for s in suggestions)
+
+
+def test_closeout_reports_stepproof_state_without_installed_cli(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / ".stepproof").mkdir()
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+
+    from eidos_cli.cli.closeout import build_report
+
+    with patch("eidos_cli.stepproof.shutil.which", return_value=None):
+        payload = build_report(str(repo), [], True)
+
+    assert payload["ok"] is True
+    assert payload["stepproof"][0]["status"] == "advisory-pass"
+    assert payload["stepproof"][0]["installed"] is False
+
+
+def test_closeout_fails_on_corrupt_stepproof_audit(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / ".stepproof").mkdir()
+    fakebin = tmp_path / "fakebin"
+    _write_fake_stepproof(fakebin, audit_exit=1)
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={
+            "EIDOS_CODEX_MARKETPLACE": str(marketplace),
+            "PATH": _path_with_fakebin(fakebin),
+        },
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["stepproof"][0]["audit"]["ok"] is False
 
 
 # ── ship ───────────────────────────────────────────────────────────────────
@@ -653,6 +726,80 @@ def test_ship_runs_manifest_custom_gate(tmp_path: Path):
     assert custom["status"] == "pass"
 
 
+def test_ship_fails_when_required_stepproof_unavailable(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed", "stepproof-audit"]',
+                "",
+                "[stepproof]",
+                "required = true",
+                "audit = true",
+            ]
+        )
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "require stepproof"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    gate = next(g for g in payload["gates"] if g["id"] == "stepproof-audit")
+    assert gate["status"] == "fail"
+
+
+def test_ship_records_stepproof_audit_and_metrics(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / ".stepproof").mkdir()
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed", "stepproof-audit"]',
+                "",
+                "[stepproof]",
+                "required = true",
+                "audit = true",
+                "metrics = true",
+            ]
+        )
+    )
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "require stepproof"], cwd=repo, check=True, capture_output=True, text=True)
+    fakebin = tmp_path / "fakebin"
+    _write_fake_stepproof(fakebin, audit_exit=0, metrics='{"deny_count": 0}')
+
+    proc = _run(["ship", str(repo), "--json"], env={"PATH": _path_with_fakebin(fakebin)})
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    gate = next(g for g in payload["gates"] if g["id"] == "stepproof-audit")
+    assert gate["status"] == "pass"
+    assert gate["data"]["audit"]["ok"] is True
+    assert gate["data"]["metrics"]["data"]["deny_count"] == 0
+
+
 # ── help / version sanity ──────────────────────────────────────────────────
 
 
@@ -667,6 +814,35 @@ def test_top_level_help_lists_forge_namespaces():
     proc = _run(["--help"])
     for ns in ("telos", "research", "governor", "docket", "praxis"):
         assert ns in proc.stdout
+
+
+def test_do_marks_production_migration_as_requiring_stepproof(temp_eidos):
+    home, _ = temp_eidos
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9001-prod-migration.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9001",
+                "title: Run production migration",
+                "tags:",
+                "  - migration",
+                "definition-of-done:",
+                "  - migration proof attached",
+                "---",
+                "Run the production database migration with ceremony.",
+            ]
+        )
+    )
+
+    proc = _run(["do", "TASK-9001", "--json"], cwd=home)
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["cardinality"]["requires_step_proof"] is True
+    assert "step-proof-required" in payload["cardinality"]["triggers_fired"]
+    context = json.loads(Path(payload["context_bundle"]).read_text())
+    assert context["cardinality"]["requires_step_proof"] is True
 
 
 # ── plugin runtime (ADR-009) ───────────────────────────────────────────────

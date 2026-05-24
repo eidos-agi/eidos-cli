@@ -38,12 +38,16 @@ class CardinalityDecision:
     cardinality: str  # "solo" | "pair" | "pod"
     rationale: str
     triggers_fired: list[str]
+    requires_step_proof: bool = False
+    step_proof_rationale: str | None = None
 
     def to_dict(self) -> dict:
         return {
             "cardinality": self.cardinality,
             "rationale": self.rationale,
             "triggers_fired": self.triggers_fired,
+            "requires_step_proof": self.requires_step_proof,
+            "step_proof_rationale": self.step_proof_rationale,
         }
 
 
@@ -88,12 +92,43 @@ def classify(ctx: TaskContext) -> CardinalityDecision:
         "irreversible",
         "production",
         "migration",
+        "deploy",
+        "release",
         "delete",
         "destroy",
         "data loss",
+        "secret rotation",
+        "rotate secret",
+        "regulated",
+        "compliance",
     )
     if any(m in body or m in title for m in stakes_markers):
         triggers.append("high-stakes")
+
+    step_proof_markers = (
+        "migration",
+        "production",
+        "deploy",
+        "release",
+        "secret",
+        "irreversible",
+        "regulated",
+        "compliance",
+        "stepproof",
+        "step proof",
+        "ceremony",
+    )
+    requires_step_proof = (
+        any(m in body or m in title for m in step_proof_markers)
+        or bool({"migration", "production", "deploy", "deployment", "secret-rotation", "stepproof", "ceremony", "regulated"} & set(tags))
+    )
+    step_proof_rationale = (
+        "high-stakes sequential work requires verifier-gated StepProof ceremony"
+        if requires_step_proof
+        else None
+    )
+    if requires_step_proof and "step-proof-required" not in triggers:
+        triggers.append("step-proof-required")
 
     # Rule 4: ambiguity.
     ambig_markers = ("??", "ambiguous", "unclear", "tbd")
@@ -115,6 +150,8 @@ def classify(ctx: TaskContext) -> CardinalityDecision:
             cardinality="solo",
             rationale="No escalation triggers fired. Solo is the doctrinal default.",
             triggers_fired=[],
+            requires_step_proof=False,
+            step_proof_rationale=None,
         )
 
     high_stakes_floors = {"scope-spawn", "telos-set", "telos-supersede", "close-reached"}
@@ -126,6 +163,8 @@ def classify(ctx: TaskContext) -> CardinalityDecision:
                 "operations that bind the eidos's identity or future."
             ),
             triggers_fired=triggers,
+            requires_step_proof=requires_step_proof,
+            step_proof_rationale=step_proof_rationale,
         )
 
     if len(triggers) >= 2:
@@ -136,10 +175,14 @@ def classify(ctx: TaskContext) -> CardinalityDecision:
                 "Pod is the appropriate cardinality for compound risk."
             ),
             triggers_fired=triggers,
+            requires_step_proof=requires_step_proof,
+            step_proof_rationale=step_proof_rationale,
         )
 
     return CardinalityDecision(
         cardinality="pair",
         rationale=f"One escalation trigger fired ({triggers[0]}). Pair (proposer + critic) sufficient.",
         triggers_fired=triggers,
+        requires_step_proof=requires_step_proof,
+        step_proof_rationale=step_proof_rationale,
     )

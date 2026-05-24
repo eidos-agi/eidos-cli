@@ -16,6 +16,7 @@ from typing import Annotated, Any, Optional
 
 import typer
 
+from .. import stepproof
 from . import closeout
 
 try:  # py310+
@@ -47,6 +48,7 @@ BUILTIN_GATE_IDS = {
     "marketplace-check",
     "eidos-plugin-show",
     "eidos-plugin-run",
+    "stepproof-audit",
     "post-clean-artifact-scan",
 }
 
@@ -205,6 +207,10 @@ def _manifest_artifacts(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def _manifest_learnings(manifest: dict[str, Any]) -> dict[str, Any]:
     return _manifest_table(manifest, "learnings")
+
+
+def _manifest_stepproof(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "stepproof")
 
 
 def _manifest_builtin_gate_ids(manifest: dict[str, Any]) -> list[str] | None:
@@ -587,6 +593,25 @@ def _custom_gate(repo: Path, item: dict[str, Any]) -> Gate:
     )
 
 
+def _stepproof_gate(repo: Path, manifest: dict[str, Any]) -> Gate:
+    config = _manifest_stepproof(manifest)
+    required = bool(config.get("required"))
+    audit = bool(config.get("audit", True))
+    metrics = bool(config.get("metrics"))
+    check = stepproof.check_repo(repo, required=required, audit=audit, metrics=metrics)
+    status = "pass" if check["ok"] else "fail"
+    if check.get("status") == "absent" and not required:
+        status = "skip"
+    return Gate(
+        id="stepproof-audit",
+        facet="stepproof",
+        status=status,
+        detail=check.get("detail", "StepProof check complete."),
+        cwd=str(repo),
+        data=check,
+    )
+
+
 def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
     if not slug:
         return []
@@ -692,6 +717,8 @@ def build_report(
         facets.append("marketplace")
     if live_plugin:
         facets.append("eidos-plugin")
+    if wants("stepproof-audit") or _manifest_stepproof(manifest):
+        facets.append("stepproof")
 
     gates: list[Gate] = []
     if wants("git-clean-pushed"):
@@ -735,6 +762,8 @@ def build_report(
             gates.extend(live_gates[:1])
         if wants("eidos-plugin-run"):
             gates.extend(live_gates[1:])
+    if wants("stepproof-audit") or _manifest_stepproof(manifest):
+        gates.append(_stepproof_gate(repo, manifest))
     for item in _manifest_custom_gates(manifest):
         gates.append(_custom_gate(repo, item))
 

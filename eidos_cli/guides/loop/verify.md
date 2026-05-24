@@ -3,6 +3,11 @@
 VERIFY runs at `eidos do --continue`. It is the gate between substrate
 work and praxis-turn write.
 
+When CARDINALITY marks `requires_step_proof=true`, StepProof audit output is
+the stronger evidence form: the substrate should attach the relevant
+`.stepproof/runs/<run_id>/events.jsonl`, `stepproof audit verify` output, or a
+shipment report containing the `stepproof-audit` gate.
+
 ## Two layers of check
 
 1. **Structural** — deterministic. Evidence bundle exists and is

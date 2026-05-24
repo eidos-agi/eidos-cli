@@ -133,7 +133,9 @@ def register(app: typer.Typer) -> None:
         ctx_dir = eidos_dir / "docket" / "contexts" / task_id
         ctx_dir.mkdir(parents=True, exist_ok=True)
         ctx_file = ctx_dir / "context.json"
-        ctx_file.write_text(_json.dumps(ctx.to_dict(), indent=2, default=str))
+        ctx_payload = ctx.to_dict()
+        ctx_payload["cardinality"] = decision.to_dict()
+        ctx_file.write_text(_json.dumps(ctx_payload, indent=2, default=str))
 
         # Per ADR-009 §"For the loop", copy matched plugin playbooks into
         # the context bundle so the substrate has them inline. Plugins are
@@ -187,6 +189,8 @@ def register(app: typer.Typer) -> None:
             cardinality=decision.cardinality,
             cardinality_rationale=decision.rationale,
             cardinality_triggers=decision.triggers_fired,
+            requires_step_proof=decision.requires_step_proof,
+            step_proof_rationale=decision.step_proof_rationale,
         )
         env_path = save_envelope(eidos_dir, env)
 
@@ -213,6 +217,15 @@ def register(app: typer.Typer) -> None:
                 f"`eidos do --continue {task_id} --evidence {evidence_dir}`."
             ),
         }
+        if decision.requires_step_proof:
+            result["step_proof"] = {
+                "required": True,
+                "rationale": decision.step_proof_rationale,
+                "evidence_advice": (
+                    "Run the work under StepProof ceremony and attach StepProof audit "
+                    f"evidence under {evidence_dir} before continuing."
+                ),
+            }
 
         if json_:
             emit(result, json_mode=True)
@@ -227,6 +240,9 @@ def register(app: typer.Typer) -> None:
         ]
         if decision.triggers_fired:
             lines.append(f"  triggers:   {', '.join(decision.triggers_fired)}")
+        if decision.requires_step_proof:
+            lines.append("  stepproof:  required")
+            lines.append(f"              {decision.step_proof_rationale}")
         lines += [
             "",
             "context bundle:    " + str(ctx_file),
@@ -249,6 +265,14 @@ def register(app: typer.Typer) -> None:
             "      decomposes, plans, acts, writes the plan and evidence, then invokes:",
             f"      eidos do --continue {task_id} --evidence {evidence_dir}",
         ]
+        if decision.requires_step_proof:
+            lines.extend(
+                [
+                    "",
+                    "StepProof required: run the ACT work under StepProof ceremony and",
+                    f"attach StepProof audit evidence under {evidence_dir} before continuing.",
+                ]
+            )
         emit("\n".join(lines), json_mode=False)
 
 

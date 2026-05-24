@@ -46,6 +46,8 @@ class ContinuationEnvelope:
     cardinality: str
     cardinality_rationale: str
     cardinality_triggers: list[str] = field(default_factory=list)
+    requires_step_proof: bool = False
+    step_proof_rationale: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -95,6 +97,8 @@ def compute_envelope(
     cardinality: str,
     cardinality_rationale: str,
     cardinality_triggers: list[str],
+    requires_step_proof: bool = False,
+    step_proof_rationale: str | None = None,
 ) -> ContinuationEnvelope:
     """Compute the envelope at PLAN time."""
     eidos_home = Path(eidos_home).resolve()
@@ -123,6 +127,8 @@ def compute_envelope(
         cardinality=cardinality,
         cardinality_rationale=cardinality_rationale,
         cardinality_triggers=cardinality_triggers,
+        requires_step_proof=requires_step_proof,
+        step_proof_rationale=step_proof_rationale,
     )
 
 
