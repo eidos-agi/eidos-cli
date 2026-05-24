@@ -38,6 +38,8 @@ Operationally:
 
 When the user asks a broad Eidos AGI question, run the smallest relevant `eidos` command first, then answer from live output and route onward only when needed.
 
+If `eidos status` reports `no eidos found at or above current directory`, do not describe the Eidos plugin or CLI as broken. Interpret it as a scope issue: the CLI is installed and responding, but the current working directory is not inside an eidos home or member repo. Say that plainly, and offer to `eidos define <path>`, `eidos enter` from an existing eidos, or move to an eidos-scoped repo before running a tracked loop.
+
 When the user gives a docket task ID or asks to operate the Eidos loop, use `eidos do`:
 
 ```bash
