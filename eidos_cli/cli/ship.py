@@ -16,6 +16,7 @@ from typing import Annotated, Any, Optional
 
 import typer
 
+from ..agentic_first import doctrine, ship_gate_evidence
 from .. import stepproof
 from . import closeout
 
@@ -49,6 +50,7 @@ BUILTIN_GATE_IDS = {
     "eidos-plugin-show",
     "eidos-plugin-run",
     "stepproof-audit",
+    "agentic-first-doctrine",
     "post-clean-artifact-scan",
 }
 
@@ -64,6 +66,7 @@ AGENT_CONTRACT = {
         "A caller may run ship again after separate human or agent work, but "
         "ship itself does not recurse."
     ),
+    "agentic_first": doctrine(),
 }
 
 AGENT_GATE_KINDS = {
@@ -644,6 +647,18 @@ def _stepproof_gate(repo: Path, manifest: dict[str, Any]) -> Gate:
     )
 
 
+def _agentic_first_gate(repo: Path, manifest: dict[str, Any]) -> Gate:
+    evidence = ship_gate_evidence(repo, manifest)
+    return Gate(
+        id="agentic-first-doctrine",
+        facet="agentic-first",
+        status=evidence["status"],
+        detail=evidence["detail"],
+        cwd=str(repo),
+        data=evidence["data"],
+    )
+
+
 def _live_plugin_gate(slug: str | None, repo: Path) -> list[Gate]:
     if not slug:
         return []
@@ -751,10 +766,14 @@ def build_report(
         facets.append("eidos-plugin")
     if wants("stepproof-audit") or _manifest_stepproof(manifest):
         facets.append("stepproof")
+    if wants("agentic-first-doctrine"):
+        facets.append("agentic-first")
 
     gates: list[Gate] = []
     if wants("git-clean-pushed"):
         gates.append(_git_gate(repo))
+    if wants("agentic-first-doctrine"):
+        gates.append(_agentic_first_gate(repo, manifest))
     if wants("artifact-scan"):
         initial_artifacts = _find_artifacts(repo, manifest)
         if initial_artifacts and clean:

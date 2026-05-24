@@ -1,0 +1,261 @@
+{
+  "ok": false,
+  "repo": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+  "manifest": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli/.eidos/ship/manifest.toml",
+  "shipment_style": "cli-first private-dependency shipment",
+  "agent_contract": {
+    "role": "one-shot shipment gate",
+    "invokes_subagents": false,
+    "max_repair_iterations": 0,
+    "repair_policy": "Ship observes, verifies, reports, and writes evidence. It may suggest next actions, but it must not spawn reviewers or repair agents.",
+    "loop_stop": "A caller may run ship again after separate human or agent work, but ship itself does not recurse.",
+    "agentic_first": {
+      "title": "AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE",
+      "preference": "Eidos prefers agentic improvement over software production.",
+      "warning": "Do not write code merely because code is possible.",
+      "pre_code_question": "Before coding, justify why instruction, routing, proof, Converge, Felix, StepProof, or praxis is insufficient.",
+      "code_justification_categories": [
+        "evidence gate",
+        "adapter",
+        "thin CLI/plugin shim",
+        "schema/contract",
+        "specialist runtime",
+        "business/domain logic"
+      ],
+      "non_code_paths_preferred": [
+        "instruction",
+        "routing",
+        "proof",
+        "Converge",
+        "Felix",
+        "StepProof",
+        "praxis"
+      ]
+    }
+  },
+  "facets": [
+    "agentic-first",
+    "cli",
+    "codex-plugin",
+    "python-package",
+    "workspace"
+  ],
+  "project": {
+    "name": "eidos-cli",
+    "scripts": [
+      "eidos"
+    ]
+  },
+  "do_not": [
+    "Do not use uv run as the Eidos CLI proof path here; private forge dependencies are installed in pyenv 3.12.7 and may not resolve from public indexes.",
+    "Do not claim a shipment from source tests alone; verify the installed eidos command surface too.",
+    "Do not treat ignored __pycache__ or .pytest_cache residue as acceptable final state.",
+    "Do not overwrite existing local commits; preserve and push the current stack."
+  ],
+  "yes": [
+    "Use the installed pyenv 3.12.7 Eidos environment for live CLI verification.",
+    "Run the full pytest suite from this checkout before pushing Eidos CLI changes.",
+    "Verify eidos --help and eidos ship --help after changing command registration.",
+    "Run eidos closeout as the final residue gate after committing and pushing."
+  ],
+  "notes": [
+    "This repo's shipment style is CLI runtime first, not PyPI publication first.",
+    "Wheel/install gates can be added after all private forge dependencies have a resolvable package source."
+  ],
+  "gates": [
+    {
+      "id": "git-clean-pushed",
+      "facet": "workspace",
+      "status": "fail",
+      "ok": false,
+      "detail": "Working tree or upstream state needs attention.",
+      "command": null,
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": null,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": null,
+      "artifacts": [],
+      "data": {
+        "path": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+        "kind": "git",
+        "ok": false,
+        "status": "needs-attention",
+        "branch": "main",
+        "head": "a9fef38",
+        "upstream": "origin/main",
+        "ahead": 0,
+        "behind": 0,
+        "clean": false,
+        "modified_count": 10,
+        "untracked_count": 2,
+        "examples": [
+          " M .eidos/ship/manifest.toml",
+          " M CODEX-PLUGIN.md",
+          " M eidos_cli/cli/closeout.py",
+          " M eidos_cli/cli/do.py",
+          " M eidos_cli/cli/ship.py",
+          " M eidos_cli/guides/index.md",
+          " M eidos_cli/guides/loop.md",
+          " M eidos_cli/guides/plugins.md",
+          " M skills/use-eidos-cli/SKILL.md",
+          " M tests/test_smoke.py"
+        ],
+        "detail": "Working tree or upstream state needs attention."
+      }
+    },
+    {
+      "id": "agentic-first-doctrine",
+      "facet": "agentic-first",
+      "status": "pass",
+      "ok": true,
+      "detail": "Agentic-first manifest proof is present.",
+      "command": null,
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": null,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": null,
+      "artifacts": [],
+      "data": {
+        "doctrine": {
+          "title": "AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE",
+          "preference": "Eidos prefers agentic improvement over software production.",
+          "warning": "Do not write code merely because code is possible.",
+          "pre_code_question": "Before coding, justify why instruction, routing, proof, Converge, Felix, StepProof, or praxis is insufficient.",
+          "code_justification_categories": [
+            "evidence gate",
+            "adapter",
+            "thin CLI/plugin shim",
+            "schema/contract",
+            "specialist runtime",
+            "business/domain logic"
+          ],
+          "non_code_paths_preferred": [
+            "instruction",
+            "routing",
+            "proof",
+            "Converge",
+            "Felix",
+            "StepProof",
+            "praxis"
+          ]
+        },
+        "code_bearing": true,
+        "manifest": {
+          "code_justification": "evidence gate",
+          "agentic_capability": "Makes Eidos shipment and closeout prefer instruction, routing, proof, and learning before code-only progress.",
+          "non_code_paths_considered": [
+            "instruction",
+            "routing",
+            "proof",
+            "Converge",
+            "Felix",
+            "StepProof",
+            "praxis"
+          ]
+        }
+      }
+    },
+    {
+      "id": "pre-clean-artifact-scan",
+      "facet": "workspace",
+      "status": "pass",
+      "ok": true,
+      "detail": "Generated artifacts were found before shipment and cleaned before gates ran.",
+      "command": null,
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": null,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": null,
+      "artifacts": [
+        "eidos_cli/__pycache__",
+        "eidos_cli/cli/__pycache__",
+        "eidos_cli/orchestrator/__pycache__",
+        "eidos_cli/plugin_runtime/__pycache__",
+        "eidos_cli/plugins/__pycache__",
+        "eidos_cli/scope/__pycache__"
+      ],
+      "data": {}
+    },
+    {
+      "id": "pytest-installed-env",
+      "facet": "test",
+      "status": "pass",
+      "ok": true,
+      "detail": "Full Eidos CLI smoke suite passed in the installed pyenv environment.",
+      "command": [
+        "bash",
+        "--noprofile",
+        "--norc",
+        "-lc",
+        "PYENV_VERSION=3.12.7 PYTHONPYCACHEPREFIX=/tmp/eidos-cli-pycache PYTHONDONTWRITEBYTECODE=1 pytest -q"
+      ],
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": 0,
+      "stdout_tail": ".....................................................                    [100%]\n53 passed in 57.71s",
+      "stderr_tail": "/Users/dshanklinbv/.pyenv/versions/3.12.7/lib/python3.12/site-packages/pytest_asyncio/plugin.py:208: PytestDeprecationWarning: The configuration option \"asyncio_default_fixture_loop_scope\" is unset.\nThe event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: \"function\", \"class\", \"module\", \"package\", \"session\"\n\n  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))",
+      "duration_seconds": 59.036,
+      "artifacts": [],
+      "data": {}
+    },
+    {
+      "id": "installed-eidos-help",
+      "facet": "cli",
+      "status": "pass",
+      "ok": true,
+      "detail": "Installed eidos help exposes the ship command.",
+      "command": [
+        "bash",
+        "--noprofile",
+        "--norc",
+        "-lc",
+        "PYENV_VERSION=3.12.7 eidos --help | grep -q 'ship'"
+      ],
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": 0,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": 0.691,
+      "artifacts": [],
+      "data": {}
+    },
+    {
+      "id": "installed-ship-help",
+      "facet": "cli",
+      "status": "pass",
+      "ok": true,
+      "detail": "Installed eidos ship help exposes manifest-aware shipment behavior.",
+      "command": [
+        "bash",
+        "--noprofile",
+        "--norc",
+        "-lc",
+        "PYENV_VERSION=3.12.7 eidos ship --help | grep -q 'manifest'"
+      ],
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": 0,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": 0.685,
+      "artifacts": [],
+      "data": {}
+    },
+    {
+      "id": "post-clean-artifact-scan",
+      "facet": "workspace",
+      "status": "pass",
+      "ok": true,
+      "detail": "No generated build/cache artifacts found in the checkout.",
+      "command": null,
+      "cwd": "/Users/dshanklinbv/repos-eidos-agi/eidos-cli",
+      "exit_code": null,
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "duration_seconds": null,
+      "artifacts": [],
+      "data": {}
+    }
+  ]
+}

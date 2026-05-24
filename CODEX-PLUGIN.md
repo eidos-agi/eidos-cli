@@ -23,6 +23,7 @@ Use Eidos when work needs to be accountable:
 - run closeout before claiming done
 - write the learning back into the system
 - route specialist work only when needed
+- route to Converge when software completion needs target/probe rows, drift checks, regression memory, or row aggregation
 - resist Eidos bloat by adding awareness/proof gates before adding ownership
 
 ## Three Modes
@@ -58,6 +59,20 @@ The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context 
 
 `eidos ship` is a one-shot shipment gate, not a repair loop. It can report what proof failed and what the agent should do next, but it does not spawn reviewers, run subagents, modify code, or recurse. Run any reviewer or repair agent outside `ship`, then rerun `ship` once to verify the result.
 
+## Agentic-First Doctrine
+
+AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE
+
+Eidos prefers agentic improvement over software production.
+
+Do not write code merely because code is possible. Software is justified only
+when it strengthens judgment, evidence, routing, memory, constraints,
+measurement, repair, learning, or closeout.
+
+Before coding, justify why instruction, routing, proof, Converge, Felix,
+StepProof, or praxis is insufficient. If one of those paths can solve the
+problem, prefer it over new software.
+
 ## Non-Goal
 
 This plugin does not do the work itself. It starts and closes the loop around the work.
@@ -78,6 +93,7 @@ in the specialist and teach Eidos how to call and verify it.
 - `reeves@eidos-agi`: routing layer for the live Reeves CLI.
 - `surfari@eidos-agi`: routing layer for the live Surfari CLI and browser-agent improvement loop.
 - `forge-forge@eidos-agi`: routing layer for Eidos forge discovery and forge creation patterns.
+- `converge`: measurable completion forge for target rows, adapters, aggregators, drift/regression checks, and repair/re-score loops.
 
 ## Install In Codex
 

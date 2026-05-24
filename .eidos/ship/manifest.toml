@@ -8,9 +8,15 @@ skip_live = true
 [gates]
 builtin = [
   "git-clean-pushed",
+  "agentic-first-doctrine",
   "artifact-scan",
   "post-clean-artifact-scan",
 ]
+
+[agentic_first]
+code_justification = "evidence gate"
+agentic_capability = "Makes Eidos shipment and closeout prefer instruction, routing, proof, and learning before code-only progress."
+non_code_paths_considered = ["instruction", "routing", "proof", "Converge", "Felix", "StepProof", "praxis"]
 
 [artifacts]
 generated_names = [

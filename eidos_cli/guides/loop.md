@@ -38,6 +38,19 @@ eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one
 5. **LEARN** — write the praxis turn. Route the artifact to its system
    of record. Log a plugin candidate if a stable pattern_id is present.
 
+## Agentic-first preflight
+
+Every `eidos do` plan starts with agentic-first preflight. The substrate
+must name what it has, what it wants, what it does not want, the proof
+target, the specialist owner, why code is necessary, which non-code paths
+were considered, and which code justification category applies.
+
+Before coding, justify why instruction, routing, proof, Converge, Felix,
+StepProof, or praxis is insufficient. Eidos prefers agentic improvement over
+software production; code that does not improve judgment, evidence, routing,
+memory, constraints, measurement, repair, learning, or closeout should not be
+built.
+
 ## Closeout
 
 Before saying a mission is finished, run:

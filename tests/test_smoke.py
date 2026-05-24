@@ -596,6 +596,48 @@ def test_closeout_fails_on_corrupt_stepproof_audit(tmp_path: Path):
     assert payload["stepproof"][0]["audit"]["ok"] is False
 
 
+def test_closeout_fails_for_dirty_code_without_agentic_protocol(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / "tool.py").write_text("print('code-only')\n")
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["agentic_first"]["ok"] is False
+    assert payload["agentic_first"]["repos"][0]["dirty_code_changes"] == ["tool.py"]
+
+
+def test_closeout_allows_dirty_code_with_agentic_protocol(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / "tool.py").write_text("print('paired')\n")
+    guides = repo / "eidos_cli" / "guides"
+    guides.mkdir(parents=True)
+    (guides / "loop.md").write_text("# Loop\n\nAgentic protocol changed.\n")
+    marketplace = tmp_path / "marketplace.json"
+    marketplace.write_text('{"plugins": []}')
+
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"EIDOS_CODEX_MARKETPLACE": str(marketplace)},
+    )
+
+    payload = json.loads(proc.stdout)
+    assert payload["agentic_first"]["ok"] is True
+    assert payload["agentic_first"]["repos"][0]["agentic_protocol_changes"] == [
+        "eidos_cli/guides/loop.md"
+    ]
+
+
 # ── ship ───────────────────────────────────────────────────────────────────
 
 
@@ -614,6 +656,8 @@ def test_ship_passes_minimal_clean_repo_without_build(tmp_path: Path):
     assert payload["agent_contract"]["max_repair_iterations"] == 0
     assert any(g["id"] == "git-clean-pushed" and g["status"] == "pass" for g in payload["gates"])
     assert any(g["id"] == "artifact-scan" and g["status"] == "pass" for g in payload["gates"])
+    agentic_gate = next(g for g in payload["gates"] if g["id"] == "agentic-first-doctrine")
+    assert agentic_gate["status"] == "skip"
 
 
 def test_ship_fails_on_generated_artifacts(tmp_path: Path):
@@ -631,6 +675,92 @@ def test_ship_fails_on_generated_artifacts(tmp_path: Path):
     artifact_gate = next(g for g in payload["gates"] if g["id"] == "artifact-scan")
     assert artifact_gate["status"] == "fail"
     assert "__pycache__" in artifact_gate["artifacts"]
+
+
+def test_ship_fails_code_repo_without_agentic_first_proof(tmp_path: Path):
+    repo = tmp_path / "repo"
+    pkg = repo / "src" / "demo_pkg"
+    pkg.mkdir(parents=True)
+    (repo / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[build-system]",
+                'requires = ["setuptools>=68.0"]',
+                'build-backend = "setuptools.build_meta"',
+                "",
+                "[project]",
+                'name = "demo-pkg"',
+                'version = "0.1.0"',
+                'requires-python = ">=3.10"',
+            ]
+        )
+    )
+    (pkg / "__init__.py").write_text('__version__ = "0.1.0"\n')
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "package"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--skip-build", "--skip-tests", "--skip-live", "--json"])
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    gate = next(g for g in payload["gates"] if g["id"] == "agentic-first-doctrine")
+    assert gate["status"] == "fail"
+    assert "Before coding" in gate["detail"]
+
+
+def test_ship_passes_code_repo_with_agentic_first_manifest(tmp_path: Path):
+    repo = tmp_path / "repo"
+    pkg = repo / "src" / "demo_pkg"
+    pkg.mkdir(parents=True)
+    (repo / "pyproject.toml").write_text(
+        "\n".join(
+            [
+                "[build-system]",
+                'requires = ["setuptools>=68.0"]',
+                'build-backend = "setuptools.build_meta"',
+                "",
+                "[project]",
+                'name = "demo-pkg"',
+                'version = "0.1.0"',
+                'requires-python = ">=3.10"',
+            ]
+        )
+    )
+    (pkg / "__init__.py").write_text('__version__ = "0.1.0"\n')
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "",
+                "[gates]",
+                'builtin = ["git-clean-pushed", "agentic-first-doctrine"]',
+                "",
+                "[agentic_first]",
+                'code_justification = "evidence gate"',
+                'agentic_capability = "Makes closeout enforce proof before software progress."',
+                'non_code_paths_considered = ["instruction", "routing", "proof"]',
+            ]
+        )
+    )
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "package"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    gate = next(g for g in payload["gates"] if g["id"] == "agentic-first-doctrine")
+    assert gate["status"] == "pass"
+    assert payload["agent_contract"]["agentic_first"]["title"] == (
+        "AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE"
+    )
 
 
 def test_ship_catches_runtime_version_mismatch(tmp_path: Path):
@@ -874,6 +1004,17 @@ def test_top_level_help_lists_forge_namespaces():
         assert ns in proc.stdout
 
 
+def test_guides_include_agentic_first_doctrine():
+    guide = _run(["guide"])
+    loop = _run(["guide", "loop"])
+
+    assert guide.returncode == 0
+    assert loop.returncode == 0
+    assert "AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE" in guide.stdout
+    assert "Eidos prefers agentic improvement over software production." in guide.stdout
+    assert "Before coding" in loop.stdout
+
+
 def test_do_marks_production_migration_as_requiring_stepproof(temp_eidos):
     home, _ = temp_eidos
     task = home / ".eidos" / "docket" / "tasks" / "TASK-9001-prod-migration.md"
@@ -901,6 +1042,35 @@ def test_do_marks_production_migration_as_requiring_stepproof(temp_eidos):
     assert "step-proof-required" in payload["cardinality"]["triggers_fired"]
     context = json.loads(Path(payload["context_bundle"]).read_text())
     assert context["cardinality"]["requires_step_proof"] is True
+
+
+def test_do_emits_agentic_first_preflight(temp_eidos):
+    home, _ = temp_eidos
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9002-agentic.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9002",
+                "title: Improve agentic selection pressure",
+                "definition-of-done:",
+                "  - doctrine emitted",
+                "---",
+                "Make Eidos prefer agentic behavior over code-only work.",
+            ]
+        )
+    )
+
+    proc = _run(["do", "TASK-9002", "--json"], cwd=home)
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["agentic_first"]["title"] == "AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE"
+    context = json.loads(Path(payload["context_bundle"]).read_text())
+    assert context["agentic_first"]["warning"] == "Do not write code merely because code is possible."
+    plan = Path(payload["plan_path"]).read_text()
+    assert "## Agentic-First Preflight" in plan
+    assert "Why code is necessary:" in plan
 
 
 # ── plugin runtime (ADR-009) ───────────────────────────────────────────────

@@ -27,6 +27,20 @@ Eidos. If it makes Eidos own a domain-specific runtime that a specialist CLI
 already owns, keep it in the specialist and teach Eidos how to call and verify
 that specialist instead.
 
+## Agentic-First Doctrine
+
+AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE
+
+Eidos prefers agentic improvement over software production.
+
+Do not write code merely because code is possible. Code is a last-mile
+substrate for judgment, evidence, routing, memory, constraints, measurement,
+repair, learning, and closeout.
+
+Before coding, justify why instruction, routing, proof, Converge, Felix,
+StepProof, or praxis is insufficient. If one of those paths can solve the
+problem, prefer it over new software.
+
 In practice, Eidos has three modes:
 
 1. Orient
@@ -105,6 +119,7 @@ After Eidos gives the operating picture, route to the specialist surface that ow
 - Use Reeves for Daniel's personal operating picture, finance freshness, mail/messages evidence, tasks, memory, and wiki.
 - Use Surfari for browser-agent runs, web-surfing evaluations, playbooks, and browser runtime improvement loops.
 - Use Forge-Forge for forge discovery, forge patterns, registry lookups, and creating new domain forges.
+- Use Converge for measurable software completion: target/probe rows, adapter evidence, row aggregation, drift checks, regression memory, and repair/re-score loops.
 - Use Eidos Vault for secret paths, API key status, and platform credentials when a task explicitly requires them.
 
 Prefer the specialist CLI after routing. A plugin or MCP shim may help Codex discover or call the CLI, but the CLI should own the domain logic and deeper tool reveal.
@@ -112,6 +127,11 @@ Prefer the specialist CLI after routing. A plugin or MCP shim may help Codex dis
 StepProof is the model for this boundary: Eidos can require StepProof for
 high-stakes sequential work, detect `.stepproof/`, and verify `stepproof audit
 verify`, but StepProof remains the enforcement runtime.
+
+Converge follows the same boundary. Eidos can route to the installed `converge`
+plugin when completion needs a target lattice, but Converge owns the row
+schemas, adapters, aggregators, and repair map. Eidos owns evidence,
+continuation, learning, and closeout.
 
 ## What This Plugin Does Not Do
 

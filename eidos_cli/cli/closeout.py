@@ -10,6 +10,13 @@ from typing import Annotated, Optional
 
 import typer
 
+from ..agentic_first import (
+    PRE_CODE_QUESTION,
+    doctrine,
+    is_agentic_protocol_path,
+    is_code_path,
+    parse_porcelain_path,
+)
 from .. import stepproof
 from ..scope.manifest import load_manifest
 from ..scope.resolver import resolve_from_cwd, resolve_home_from_path
@@ -186,6 +193,80 @@ def _plugin_runs_check(paths: list[Path]) -> dict:
     return result
 
 
+def _expand_status_paths(root: Path, paths: list[str]) -> list[str]:
+    expanded: list[str] = []
+    for rel in paths:
+        path = root / rel
+        if path.is_dir():
+            expanded.extend(
+                p.relative_to(root).as_posix() for p in path.rglob("*") if p.is_file()
+            )
+        else:
+            expanded.append(rel)
+    return sorted(set(expanded))
+
+
+def _agentic_first_check(paths: list[Path]) -> dict:
+    result = {
+        "kind": "agentic-first",
+        "ok": True,
+        "status": "ok",
+        "doctrine": doctrine(),
+        "repos": [],
+        "detail": "Code changes are paired with agentic protocol or proof changes.",
+    }
+    seen: set[str] = set()
+    for path in paths:
+        root = _git_root(path)
+        if root is None:
+            continue
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        porcelain = _run(["git", "status", "--porcelain=v1"], root).stdout.splitlines()
+        dirty_paths = _expand_status_paths(root, [parse_porcelain_path(line) for line in porcelain])
+        dirty_code = sorted(p for p in dirty_paths if is_code_path(p))
+        dirty_protocol = sorted(p for p in dirty_paths if is_agentic_protocol_path(p))
+
+        upstream_proc = _run(
+            ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], root
+        )
+        upstream = upstream_proc.stdout.strip() if upstream_proc.returncode == 0 else ""
+        unpushed_paths: list[str] = []
+        if upstream:
+            diff_proc = _run(["git", "diff", "--name-only", f"{upstream}..HEAD"], root)
+            if diff_proc.returncode == 0:
+                unpushed_paths = [line.strip() for line in diff_proc.stdout.splitlines() if line.strip()]
+        unpushed_code = sorted(p for p in unpushed_paths if is_code_path(p))
+        unpushed_protocol = sorted(p for p in unpushed_paths if is_agentic_protocol_path(p))
+
+        repo_ok = True
+        reasons: list[str] = []
+        if dirty_code and not dirty_protocol:
+            repo_ok = False
+            reasons.append("dirty code changes have no paired agentic protocol/proof change")
+        if unpushed_code and not unpushed_protocol:
+            repo_ok = False
+            reasons.append("unpushed code commits have no paired agentic protocol/proof change")
+        result["repos"].append(
+            {
+                "path": key,
+                "ok": repo_ok,
+                "dirty_code_changes": dirty_code,
+                "agentic_protocol_changes": dirty_protocol,
+                "unpushed_code_changes": unpushed_code,
+                "unpushed_agentic_protocol_changes": unpushed_protocol,
+                "detail": "; ".join(reasons) if reasons else "Agentic-first pairing satisfied.",
+            }
+        )
+
+    if any(not repo["ok"] for repo in result["repos"]):
+        result.update(ok=False, status="needs-attention", detail=PRE_CODE_QUESTION)
+    return result
+
+
 def _format(report: dict) -> str:
     lines = [f"Closeout verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}", "", "Git repositories:"]
     for check in report["git"]:
@@ -215,6 +296,16 @@ def _format(report: dict) -> str:
         lines.append(f"  incomplete {incomplete['path']}: {incomplete['detail']}")
         for suggestion in incomplete.get("suggestions", [])[:4]:
             lines.append(f"    next: {suggestion}")
+    af = report["agentic_first"]
+    marker = "PASS" if af["ok"] else "FAIL"
+    lines.extend(["", f"Agentic-first: {marker}"])
+    lines.append(f"  {af['detail']}")
+    for repo in af.get("repos", [])[:10]:
+        lines.append(
+            f"  {repo['path']}: code={len(repo.get('dirty_code_changes', []))} "
+            f"protocol={len(repo.get('agentic_protocol_changes', []))} "
+            f"unpushed_code={len(repo.get('unpushed_code_changes', []))}"
+        )
     lines.extend(["", "StepProof:"])
     for sp in report.get("stepproof", []):
         marker = "PASS" if sp["ok"] else "FAIL"
@@ -240,11 +331,13 @@ def build_report(path: Optional[str], repos: list[str], include_codex_marketplac
         else {"kind": "codex-marketplace", "ok": True, "status": "skipped"}
     )
     plugin_runs = _plugin_runs_check(repo_paths)
+    agentic_first = _agentic_first_check(repo_paths)
     stepproof_checks = [stepproof.check_repo(p) for p in repo_paths]
     ok = (
         all(check["ok"] for check in git_checks)
         and codex_marketplace["ok"]
         and plugin_runs["ok"]
+        and agentic_first["ok"]
         and all(check["ok"] for check in stepproof_checks)
     )
     return {
@@ -252,6 +345,7 @@ def build_report(path: Optional[str], repos: list[str], include_codex_marketplac
         "git": git_checks,
         "codex_marketplace": codex_marketplace,
         "plugin_runs": plugin_runs,
+        "agentic_first": agentic_first,
         "stepproof": stepproof_checks,
     }
 

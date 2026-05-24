@@ -41,6 +41,7 @@ FORGES:       eidos telos / research / governor / docket / praxis ...
 PLUGINS:      eidos plugin list/install/run/show
               eidos <plugin-alias>   — top-level alias for an installed plugin
               eidos learn            — praxis-turn → plugin; status/verify/finish
+              converge               — measurable completion / target rows / repair map
 
 GUIDE:        eidos guide [topic]    — this manual, recursive drill-down
 ```
@@ -52,6 +53,18 @@ That single verb walks THE-LOOP: PERCEIVE → CARDINALITY → emit context
 bundle → (substrate acts) → `eidos do --continue` → VERIFY → LEARN.
 The engine handles the structure; you handle the substance.
 
+## AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE
+
+Eidos prefers agentic improvement over software production.
+
+Do not write code merely because code is possible. Code is a last-mile
+substrate for judgment, evidence, routing, memory, constraints, measurement,
+repair, learning, and closeout.
+
+Before coding, justify why instruction, routing, proof, Converge, Felix,
+StepProof, or praxis is insufficient. If one of those can solve the problem,
+prefer that path over new software.
+
 ## The compounding layer
 
 Every `eidos do` loop writes a praxis turn — what changed, why. The
@@ -59,6 +72,11 @@ first-class `learn` command promotes a praxis turn into a reusable plugin,
 landing it in `~/.eidos/plugins/`. The *next* eidos's PERCEIVE phase
 matches that plugin against its task and attaches the playbook to the
 context bundle. **One eidos's learning becomes every eidos's reflex.**
+
+`converge` is the plugin to use when the loop needs measurable completion:
+target/probe rows, adapter evidence, drift checks, regression memory, row
+aggregation, and ranked repair targets. Eidos keeps the outer evidence loop;
+Converge supplies the target lattice and repair map.
 
 ## On-disk shape
 

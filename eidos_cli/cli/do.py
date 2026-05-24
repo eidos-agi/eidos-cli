@@ -24,6 +24,7 @@ from typing import Annotated, Optional
 
 import typer
 
+from ..agentic_first import doctrine, doctrine_lines, plan_preflight
 from ..orchestrator.cardinality import classify
 from ..orchestrator.envelope import (
     compute_envelope,
@@ -135,6 +136,7 @@ def register(app: typer.Typer) -> None:
         ctx_file = ctx_dir / "context.json"
         ctx_payload = ctx.to_dict()
         ctx_payload["cardinality"] = decision.to_dict()
+        ctx_payload["agentic_first"] = doctrine()
         ctx_file.write_text(_json.dumps(ctx_payload, indent=2, default=str))
 
         # Per ADR-009 §"For the loop", copy matched plugin playbooks into
@@ -163,10 +165,7 @@ def register(app: typer.Typer) -> None:
         plan_path = eidos_dir / "docket" / "plans" / f"{task_id}.md"
         plan_path.parent.mkdir(parents=True, exist_ok=True)
         if not plan_path.exists():
-            plan_path.write_text(
-                f"# Plan — {task_id}\n\n"
-                f"<the substrate writes the DECOMPOSE/SPECIALIZE output here>\n"
-            )
+            plan_path.write_text(plan_preflight(task_id))
 
         # Scaffold the evidence bundle dir.
         evidence_dir = eidos_dir / "docket" / "evidence" / task_id
@@ -203,6 +202,7 @@ def register(app: typer.Typer) -> None:
             "plan_path": str(plan_path),
             "evidence_bundle": str(evidence_dir),
             "continuation_envelope": str(env_path),
+            "agentic_first": doctrine(),
             "matched_plugins": [
                 {
                     "slug": pm["slug"],
@@ -237,6 +237,8 @@ def register(app: typer.Typer) -> None:
             f"task:         {ctx.task_frontmatter.get('title', '')}",
             f"cardinality:  {decision.cardinality}",
             f"  rationale:  {decision.rationale}",
+            "",
+            *doctrine_lines(),
         ]
         if decision.triggers_fired:
             lines.append(f"  triggers:   {', '.join(decision.triggers_fired)}")

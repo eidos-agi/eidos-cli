@@ -78,3 +78,24 @@ PERCEIVE matches installed plugins against the task via four paths:
 Matched playbooks are copied into the context bundle under
 `contexts/<task-id>/plugins/<slug>.md` with a REQUIRED/advisory marker
 and the match reasons.
+
+## Converge
+
+`converge` is the installed plugin for measurable software completion. Use it
+when a task asks whether software is complete, reliable, production-ready, or
+at 100%, or when the work has target/probe comparisons, drift monitors,
+regression memory, or repeated repair/re-score loops.
+
+The boundary is:
+
+- Converge adapters emit rows.
+- Converge aggregators summarize rows.
+- Codex repairs rows.
+- Eidos preserves the outer evidence, continuation, learning, and closeout loop.
+
+Useful checks:
+
+```
+eidos plugin show converge
+eidos plugin run converge
+```
