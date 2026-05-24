@@ -13,6 +13,20 @@ The installed `eidos` CLI is the first stop for Eidos AGI platform questions and
 
 Get away from giant MCP tool surfaces. Use MCP and Codex plugins as small signposts that point to local CLIs. The CLIs are the real progressive-reveal interface: `--help`, subcommands, `doctor`, `status`, `list`, `find`, `ask`, and domain-specific commands can expose thousands of tools without loading all of them into Codex at once.
 
+Eidos is the coordinator, not the container. It should decide what proof is
+needed, which specialist owns it, when to escalate, and whether the evidence is
+clean enough to close. It should not absorb every specialist runtime into the
+engine. StepProof owns ceremony enforcement, Cept owns agent proprioception,
+Rhea owns model routing/debate, Felix owns agent-building, and so on. Eidos
+routes to those faculties and verifies their proof rather than reimplementing
+them.
+
+Use this as the bloat test: if a proposed Eidos change improves routing,
+evidence, escalation, shipment, closeout, or learning, it probably belongs in
+Eidos. If it makes Eidos own a domain-specific runtime that a specialist CLI
+already owns, keep it in the specialist and teach Eidos how to call and verify
+that specialist instead.
+
 In practice, Eidos has three modes:
 
 1. Orient
@@ -33,6 +47,7 @@ Operationally:
 - Let Eidos identify the relevant domain or specialist.
 - Run that specialist CLI's smallest useful command.
 - Only use MCP when it is the pointer or bridge to a CLI, not as the primary place to model every capability.
+- Resist turning Eidos into a command pile. Add awareness and proof gates before adding ownership.
 
 ## Primary Rule
 
@@ -90,6 +105,10 @@ After Eidos gives the operating picture, route to the specialist surface that ow
 - Use Eidos Vault for secret paths, API key status, and platform credentials when a task explicitly requires them.
 
 Prefer the specialist CLI after routing. A plugin or MCP shim may help Codex discover or call the CLI, but the CLI should own the domain logic and deeper tool reveal.
+
+StepProof is the model for this boundary: Eidos can require StepProof for
+high-stakes sequential work, detect `.stepproof/`, and verify `stepproof audit
+verify`, but StepProof remains the enforcement runtime.
 
 ## What This Plugin Does Not Do
 

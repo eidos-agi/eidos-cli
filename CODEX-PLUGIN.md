@@ -4,6 +4,13 @@ Eidos turns a vague or docketed task into a tracked, evidenced loop.
 
 This Codex plugin teaches the agent when to start that loop, when to close it out, and when to route to a specialist. The live `eidos` CLI is the runtime; the plugin is the reflex.
 
+Eidos should remain the coordinator, not the container. It decides what proof is
+needed, when to escalate, which specialist owns the next move, and whether the
+evidence is clean enough to close. It should not absorb every specialist
+runtime into the engine. StepProof owns ceremony enforcement, Cept owns agent
+proprioception, Rhea owns model routing/debate, Felix owns agent-building, and
+Eidos routes to those faculties and verifies their proof.
+
 ## The Job
 
 Use Eidos when work needs to be accountable:
@@ -16,6 +23,7 @@ Use Eidos when work needs to be accountable:
 - run closeout before claiming done
 - write the learning back into the system
 - route specialist work only when needed
+- resist Eidos bloat by adding awareness/proof gates before adding ownership
 
 ## Three Modes
 
@@ -52,6 +60,11 @@ The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context 
 This plugin does not do the work itself. It starts and closes the loop around the work.
 
 The architecture is intentionally CLI-first. Codex plugins and MCP shims should be small pointers into CLIs, not giant inventories of tools. The CLIs provide progressive reveal: guide pages, status/health checks, domain subcommands, task loops, plugin commands, vault/auth commands, and deeper specialist affordances only when the task calls for them. This is now part of the Eidos Marketplace standard: `/Users/dshanklinbv/repos-eidos-agi/eidos-marketplace/STANDARD.md`.
+
+The bloat test is explicit: if a change improves routing, evidence, escalation,
+shipment, closeout, or learning, it may belong in Eidos. If it makes Eidos own
+a domain-specific runtime that a specialist CLI already owns, keep that runtime
+in the specialist and teach Eidos how to call and verify it.
 
 ## Eidos AGI Plugin Family
 

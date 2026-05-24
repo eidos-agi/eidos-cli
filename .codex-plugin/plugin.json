@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "Eidos",
     "shortDescription": "Make work accountable: orient, run `eidos do`, verify, learn, close out.",
-    "longDescription": "Eidos turns a vague or docketed task into a tracked, evidenced loop. Use it to orient with `eidos guide/status/health`, execute docket work with `eidos do <task-id>`, continue with evidence verification, capture praxis learning, run `eidos closeout` before declaring done, and route specialist work to Rhea, Foreman, Reeves, Surfari, Forge-Forge, or Felix only when needed. The plugin does not do the work itself; it starts and closes the loop around the work.",
+    "longDescription": "Eidos turns a vague or docketed task into a tracked, evidenced loop. Use it to orient with `eidos guide/status/health`, execute docket work with `eidos do <task-id>`, continue with evidence verification, capture praxis learning, run `eidos closeout` before declaring done, and route specialist work to Rhea, Foreman, Reeves, Surfari, Forge-Forge, Felix, StepProof, or Cept only when needed. Eidos is the coordinator, not the container: it decides what proof is needed and verifies the result, but specialist runtimes keep owning their domains.",
     "developerName": "Eidos AGI",
     "category": "Productivity",
     "capabilities": [
