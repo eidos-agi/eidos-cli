@@ -50,13 +50,14 @@ In practice, Eidos has three modes:
    Use `eidos do <task-id>` and `eidos do --continue <task-id> --evidence <path>` when the user gives a docket task or asks to operate the Eidos loop.
 
 3. Closeout / Route / Learn
-   Use `eidos closeout` before saying a mission is complete. Use `eidos plugin ...`, vault/auth commands, and specialist CLIs after the live Eidos output shows who owns the next step.
+   Use `eidos cleanup` for plugin/tool fleet hygiene and `eidos closeout` before saying a mission is complete. Use `eidos plugin ...`, vault/auth commands, and specialist CLIs after the live Eidos output shows who owns the next step.
 
 Operationally:
 
 - Start with `eidos guide` for broad orientation.
 - Use `eidos status` or `eidos health` for current operating state.
 - Use `eidos do <task-id>` when the user is asking to work a docket task through the Eidos loop.
+- Use `eidos cleanup` when the user asks whether plugin/tool repos, local mirrors, or Codex cache copies are dirty, pushed, or portable to another Mac.
 - Use `eidos closeout` before claiming the mission is closed.
 - Let Eidos identify the relevant domain or specialist.
 - Run that specialist CLI's smallest useful command.
@@ -81,10 +82,17 @@ The first invocation performs PERCEIVE and CARDINALITY, writes the context bundl
 Before final completion, run:
 
 ```bash
+eidos cleanup
 eidos closeout
 ```
 
 Closeout is read-only. It checks whether relevant git repos are clean and pushed, and whether Codex marketplace entries point at real plugin bundles. If it fails, report the residue and fix it before claiming the loop is closed.
+
+`eidos cleanup` is also read-only. It classifies canonical source repos,
+local plugin mirrors, and installed Codex cache copies so cleanup preserves
+source-owned product work. The goal is portable software: source repos clean,
+pushed, documented, and installable on any Codex-enabled Mac; mirrors and caches
+are derivative and should be refreshed from source.
 
 `eidos ship` is also a one-shot evidence gate, not a repair loop. It may tell the agent what to do next, but it must not spawn subagents, run repair agents, or recurse. If review or repair work is needed, do it outside `ship`, then rerun `ship` once to verify the new state.
 
@@ -99,6 +107,7 @@ eidos status
 eidos health
 eidos do <task-id>
 eidos do --continue <task-id> --evidence <path>
+eidos cleanup
 eidos closeout
 eidos plugin list
 eidos plugin show <name>

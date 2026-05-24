@@ -64,6 +64,18 @@ current eidos/repo plus Codex marketplace plugin pointers. It is the final
 residue scan: dirty repos, unpushed commits, dangling plugin entries, and
 other cleanup work should be resolved before the loop is treated as closed.
 
+For plugin/tool fleet cleanup, run:
+
+```
+eidos cleanup
+```
+
+Cleanup is read-only. It classifies canonical source repos, local plugin
+mirrors, and installed Codex cache copies. The goal is portable software:
+source repos should be clean, pushed, documented, and installable on any
+Codex-enabled Mac; mirrors and caches are derivative and should be refreshed
+from source rather than treated as source of truth.
+
 For release-shaped work, run shipment before closeout:
 
 ```

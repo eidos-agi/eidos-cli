@@ -596,6 +596,86 @@ def test_closeout_fails_on_corrupt_stepproof_audit(tmp_path: Path):
     assert payload["stepproof"][0]["audit"]["ok"] is False
 
 
+# ── cleanup ─────────────────────────────────────────────────────────────────
+
+
+def test_cleanup_classifies_dirty_source_and_derivative_surfaces(tmp_path: Path):
+    source_root = tmp_path / "repos-eidos-agi"
+    plugin_root = tmp_path / "plugins"
+    cache_root = tmp_path / ".codex" / "plugins" / "cache" / "eidos-agi"
+    source = source_root / "demo"
+    source.mkdir(parents=True)
+    _init_git_repo(source)
+    (source / ".codex-plugin").mkdir()
+    (source / ".codex-plugin" / "plugin.json").write_text('{"name": "demo"}\n')
+    (source / "demo.py").write_text("print('dirty source')\n")
+    mirror = plugin_root / "demo"
+    (mirror / ".codex-plugin").mkdir(parents=True)
+    (mirror / ".codex-plugin" / "plugin.json").write_text('{"name": "demo"}\n')
+    cache = cache_root / "demo" / "0.1.0"
+    cache.mkdir(parents=True)
+    _init_git_repo(cache)
+    (cache / ".codex-plugin").mkdir()
+    (cache / ".codex-plugin" / "plugin.json").write_text('{"name": "demo"}\n')
+    (cache / ".agents").mkdir()
+    (cache / ".agents" / "skills").write_text("generated cache drift\n")
+
+    proc = _run(
+        [
+            "cleanup",
+            "--source-root",
+            str(source_root),
+            "--plugin-root",
+            str(plugin_root),
+            "--cache-root",
+            str(cache_root),
+            "--json",
+        ]
+    )
+
+    assert proc.returncode == 1
+    payload = json.loads(proc.stdout)
+    assert payload["ok"] is False
+    source_item = next(item for item in payload["surfaces"] if item["path"] == str(source))
+    mirror_item = next(item for item in payload["surfaces"] if item["path"] == str(mirror))
+    cache_item = next(item for item in payload["surfaces"] if item["path"] == str(cache))
+    assert source_item["kind"] == "canonical-source"
+    assert source_item["status"] == "needs-shipment"
+    assert "eidos ship" in source_item["next_actions"][0]
+    assert mirror_item["kind"] == "local-plugin-mirror"
+    assert mirror_item["source_of_truth"] == "derivative"
+    assert cache_item["kind"] == "installed-cache"
+    assert cache_item["status"] == "needs-refresh"
+    assert "Do not commit from the cache" in cache_item["next_actions"][0]
+
+
+def test_cleanup_passes_for_clean_source_repo(tmp_path: Path):
+    source_root = tmp_path / "repos-eidos-agi"
+    plugin_root = tmp_path / "plugins"
+    cache_root = tmp_path / "cache"
+    source = source_root / "demo"
+    source.mkdir(parents=True)
+    _init_git_repo(source)
+
+    proc = _run(
+        [
+            "cleanup",
+            "--source-root",
+            str(source_root),
+            "--plugin-root",
+            str(plugin_root),
+            "--cache-root",
+            str(cache_root),
+            "--json",
+        ]
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["ok"] is True
+    assert payload["surfaces"][0]["status"] == "clean"
+
+
 def test_closeout_fails_for_dirty_code_without_agentic_protocol(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -994,7 +1074,7 @@ def test_ship_records_stepproof_audit_and_metrics(tmp_path: Path):
 def test_top_level_help_lists_scope_verbs():
     proc = _run(["--help"])
     assert proc.returncode == 0
-    for verb in ("define", "enter", "status", "activate", "tick", "closeout", "ship", "close", "learn"):
+    for verb in ("define", "enter", "status", "activate", "tick", "closeout", "cleanup", "ship", "close", "learn"):
         assert verb in proc.stdout
 
 

@@ -47,6 +47,7 @@ eidos do --continue <task-id> --evidence <path> --outcome improved --delta "<one
 Closeout / Route / Learn:
 
 ```bash
+eidos cleanup
 eidos closeout
 eidos plugin list
 eidos plugin show <name>
@@ -56,6 +57,12 @@ eidos vault list
 The first `eidos do` invocation runs PERCEIVE and CARDINALITY, writes a context bundle and continuation envelope, then returns control to the substrate. After Codex acts and writes evidence, the continue invocation verifies evidence, writes the praxis turn, routes the system-of-record update, and can create plugin-learning candidates.
 
 `eidos closeout` is the final cleanup gate. It is read-only and checks for dirty repos, unpushed commits, and dangling Codex marketplace plugin entries before the agent says the mission is closed.
+
+`eidos cleanup` is the fleet cleanup audit for plugin/tool work. It is
+read-only. It separates canonical source repos from local plugin mirrors and
+installed Codex cache copies so the goal stays portable: source repos clean,
+pushed, documented, and installable on any Codex-enabled Mac; mirrors and caches
+refreshed from source.
 
 `eidos ship` is a one-shot shipment gate, not a repair loop. It can report what proof failed and what the agent should do next, but it does not spawn reviewers, run subagents, modify code, or recurse. Run any reviewer or repair agent outside `ship`, then rerun `ship` once to verify the result.
 

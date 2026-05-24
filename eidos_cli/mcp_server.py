@@ -50,7 +50,7 @@ HELP_TOOL = Tool(
                 "type": "string",
                 "description": (
                     "Optional subcommand name. Top-level verbs: define, enter, "
-                    "status, activate, tick, closeout, close, mcp. Forge namespaces: "
+                    "status, activate, tick, cleanup, closeout, close, mcp. Forge namespaces: "
                     "'telos <verb>', 'research <verb>', 'governor <verb>', "
                     "'docket <verb>', 'praxis <verb>'. Platform: 'auth <verb>', "
                     "'vault <verb>', 'health'. Use spaces to drill into nested "
@@ -101,6 +101,7 @@ def _build_top_level_help() -> str:
             "  eidos status [<path>]         # snapshot of current eidos state",
             "  eidos activate <forge>        # scaffold a previously-dormant forge",
             "  eidos tick                    # praxis tick: emit steering snapshot",
+            "  eidos cleanup                 # audit source repos vs plugin mirrors/caches",
             "  eidos closeout [<path>]       # prove repos/plugins are clean",
             "  eidos ship [<path>]           # prove repo-local manifest shipment facets",
             "  eidos close <outcome>         # reached | abandoned | superseded",
