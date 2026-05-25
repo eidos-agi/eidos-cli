@@ -102,12 +102,7 @@ def _resolve_repo_paths(path: Optional[str], repos: list[str]) -> list[Path]:
 
 
 def _codex_marketplace_check() -> dict:
-    configured = os.environ.get("EIDOS_CODEX_MARKETPLACE")
-    marketplace = (
-        Path(configured).expanduser()
-        if configured
-        else Path.home() / ".agents" / "plugins" / "marketplace.json"
-    )
+    marketplace = _resolve_codex_marketplace_path()
     result = {
         "kind": "codex-marketplace",
         "path": str(marketplace),
@@ -145,6 +140,43 @@ def _codex_marketplace_check() -> dict:
             detail="One or more marketplace entries point at missing Codex plugin manifests.",
         )
     return result
+
+
+def _resolve_codex_marketplace_path() -> Path:
+    configured = os.environ.get("EIDOS_CODEX_MARKETPLACE")
+    if configured:
+        return Path(configured).expanduser()
+
+    config_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
+    config_path = config_home / "config.toml"
+    source = _configured_eidos_marketplace_source(config_path)
+    if source:
+        return source / ".agents" / "plugins" / "marketplace.json"
+
+    return Path.home() / ".agents" / "plugins" / "marketplace.json"
+
+
+def _configured_eidos_marketplace_source(config_path: Path) -> Path | None:
+    if not config_path.is_file():
+        return None
+
+    in_eidos_marketplace = False
+    for raw_line in config_path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("[") and line.endswith("]"):
+            in_eidos_marketplace = line == "[marketplaces.eidos-agi]"
+            continue
+        if not in_eidos_marketplace or not line.startswith("source"):
+            continue
+        key, _, value = line.partition("=")
+        if key.strip() != "source":
+            continue
+        source = value.strip().strip('"').strip("'")
+        if source:
+            return Path(source).expanduser()
+    return None
 
 
 def _plugin_runs_check(paths: list[Path]) -> dict:

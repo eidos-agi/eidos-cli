@@ -60,9 +60,13 @@ eidos closeout
 ```
 
 Closeout is read-only. It checks git cleanliness and upstream sync for the
-current eidos/repo plus Codex marketplace plugin pointers. It is the final
-residue scan: dirty repos, unpushed commits, dangling plugin entries, and
-other cleanup work should be resolved before the loop is treated as closed.
+current eidos/repo plus Codex marketplace plugin pointers. The Codex
+marketplace check uses `EIDOS_CODEX_MARKETPLACE` when supplied, otherwise the
+configured `marketplaces.eidos-agi.source` in `~/.codex/config.toml`, and only
+falls back to `~/.agents/plugins/marketplace.json` for older local setups. It
+is the final residue scan: dirty repos, unpushed commits, dangling plugin
+entries, and other cleanup work should be resolved before the loop is treated
+as closed.
 
 For plugin/tool fleet cleanup, run:
 

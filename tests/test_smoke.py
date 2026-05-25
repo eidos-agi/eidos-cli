@@ -533,6 +533,46 @@ def test_closeout_catches_missing_codex_plugin(tmp_path: Path):
     assert payload["codex_marketplace"]["missing"][0]["name"] == "missing"
 
 
+def test_closeout_uses_configured_eidos_marketplace_source(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_git_repo(repo)
+    marketplace_root = tmp_path / "eidos-marketplace"
+    plugin_root = marketplace_root / "plugins" / "eidos" / ".codex-plugin"
+    plugin_root.mkdir(parents=True)
+    (plugin_root / "plugin.json").write_text('{"name":"eidos"}')
+    marketplace = marketplace_root / ".agents" / "plugins" / "marketplace.json"
+    marketplace.parent.mkdir(parents=True)
+    marketplace.write_text(
+        json.dumps(
+            {
+                "name": "eidos-agi",
+                "plugins": [
+                    {
+                        "name": "eidos",
+                        "source": {"source": "local", "path": "./plugins/eidos"},
+                    }
+                ],
+            }
+        )
+    )
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text(
+        f'[marketplaces.eidos-agi]\nsource_type = "local"\nsource = "{marketplace_root}"\n'
+    )
+
+    proc = _run(
+        ["closeout", str(repo), "--json"],
+        env={"CODEX_HOME": str(codex_home)},
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["codex_marketplace"]["path"] == str(marketplace)
+    assert payload["codex_marketplace"]["checked"] == 1
+
+
 def test_closeout_catches_incomplete_plugin_run(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
