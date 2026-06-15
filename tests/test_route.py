@@ -6,16 +6,22 @@ from pathlib import Path
 from eidos_cli.cli.route import load_registry, plan_route
 
 
-REGISTRY_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "eidos-plugin-store"
-    / "examples"
-    / "capability-registry.sample.json"
-)
+def _registry_path() -> Path:
+    repo_root = Path(__file__).resolve().parents[1]
+    candidates = [
+        repo_root.parent / "eidos-plugin-store" / "examples" / "capability-registry.sample.json",
+        Path("/Volumes/MacMiniStorage/Eidos/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+        Path("/Users/dshanklin/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise AssertionError("capability registry sample not found for route tests")
 
 
 def _registry() -> dict:
-    data, _ = load_registry(str(REGISTRY_PATH))
+    registry_path = _registry_path()
+    data, _ = load_registry(str(registry_path))
     return data
 
 
@@ -23,7 +29,7 @@ def _route(text: str) -> dict:
     return plan_route(
         text,
         _registry(),
-        registry_source=str(REGISTRY_PATH),
+        registry_source=str(_registry_path()),
         task_source="test",
         eidos_home=None,
         limit=5,
