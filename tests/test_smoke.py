@@ -471,6 +471,56 @@ def _write_fake_stepproof(fakebin: Path, *, audit_exit: int = 0, metrics: str = 
     script.chmod(0o755)
 
 
+def _write_fake_npm(fakebin: Path) -> None:
+    fakebin.mkdir(parents=True, exist_ok=True)
+    script = fakebin / "npm"
+    script.write_text(
+        "\n".join(
+            [
+                "#!/bin/sh",
+                'echo "npm $*" >> "$SHIP_TEST_LOG"',
+                'if [ "$1" = "run" ]; then',
+                "  exit 0",
+                "fi",
+                "exit 1",
+            ]
+        )
+    )
+    script.chmod(0o755)
+
+
+def _write_fake_shipr(fakebin: Path) -> None:
+    fakebin.mkdir(parents=True, exist_ok=True)
+    script = fakebin / "shipr"
+    script.write_text(
+        "\n".join(
+            [
+                "#!/bin/sh",
+                'echo "shipr $*" >> "$SHIP_TEST_LOG"',
+                'verb="$1"',
+                'project="."',
+                'status="ready"',
+                'goal="ship"',
+                'while [ "$#" -gt 0 ]; do',
+                '  case "$1" in',
+                '    --project) project="$2"; shift 2 ;;',
+                '    --status) status="$2"; shift 2 ;;',
+                '    --goal) goal="$2"; shift 2 ;;',
+                '    *) shift ;;',
+                "  esac",
+                "done",
+                'mkdir -p "$project/.shipr/release-attempts"',
+                'printf \'{"ok": true, "status": "%s", "goal": "%s"}\\n\' "$status" "$goal"',
+                'if [ "$verb" = "attempt" ]; then',
+                '  printf \'{"status":"%s","goal":"%s"}\\n\' "$status" "$goal" > "$project/.shipr/release-attempts/fake-attempt.json"',
+                "fi",
+                "exit 0",
+            ]
+        )
+    )
+    script.chmod(0o755)
+
+
 def test_closeout_passes_for_clean_repo(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -999,6 +1049,118 @@ def test_ship_runs_manifest_custom_gate(tmp_path: Path):
     payload = json.loads(proc.stdout)
     custom = next(g for g in payload["gates"] if g["id"] == "repo-specific-proof")
     assert custom["status"] == "pass"
+
+
+def test_ship_runs_node_validate_and_build_gates(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "package.json").write_text(
+        json.dumps(
+            {
+                "scripts": {
+                    "validate:capabilities": "echo validate",
+                    "build": "echo build",
+                }
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[agentic_first]",
+                'code_justification = "evidence gate"',
+                'agentic_capability = "Makes eidos ship run local Node proof commands before release claims."',
+                'non_code_paths_considered = ["instruction", "routing", "proof"]',
+            ]
+        )
+    )
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", "package.json", ".eidos"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "node package"], cwd=repo, check=True, capture_output=True, text=True)
+    fakebin = tmp_path / "fakebin"
+    _write_fake_npm(fakebin)
+    log = tmp_path / "npm.log"
+
+    proc = _run(
+        ["ship", str(repo), "--skip-tests", "--skip-live", "--skip-shipr", "--json"],
+        env={"PATH": _path_with_fakebin(fakebin), "SHIP_TEST_LOG": str(log)},
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    validate_gate = next(g for g in payload["gates"] if g["id"] == "node-validate")
+    build_gate = next(g for g in payload["gates"] if g["id"] == "node-build")
+    assert validate_gate["status"] == "pass"
+    assert build_gate["status"] == "pass"
+    assert "npm run validate:capabilities" in log.read_text()
+    assert "npm run build" in log.read_text()
+
+
+def test_ship_does_not_clean_dependency_dist_dirs(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    vendor_dist = repo / "node_modules" / "astro" / "dist"
+    vendor_dist.mkdir(parents=True)
+    (vendor_dist / "cli.js").write_text("ok\n")
+    (repo / "dist").mkdir()
+    ship_dir = repo / ".eidos" / "ship"
+    ship_dir.mkdir(parents=True)
+    (ship_dir / "manifest.toml").write_text(
+        "\n".join(
+            [
+                "[repo]",
+                "skip_tests = true",
+                "skip_build = true",
+                "skip_live = true",
+                "skip_shipr = true",
+                "",
+                "[gates]",
+                'builtin = ["artifact-scan", "post-clean-artifact-scan"]',
+            ]
+        )
+    )
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", ".eidos"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "ship manifest"], cwd=repo, check=True, capture_output=True, text=True)
+
+    proc = _run(["ship", str(repo), "--json"])
+
+    assert proc.returncode == 0, proc.stderr
+    assert not (repo / "dist").exists()
+    assert (vendor_dist / "cli.js").is_file()
+
+
+def test_ship_records_shipr_attempt_when_shipr_memory_exists(tmp_path: Path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / ".shipr" / "release-attempts").mkdir(parents=True)
+    (repo / ".shipr" / "product-release-model.json").write_text('{"product_id":"repo"}\n')
+    _init_git_repo(repo)
+    subprocess.run(["git", "add", ".shipr"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "shipr memory"], cwd=repo, check=True, capture_output=True, text=True)
+    fakebin = tmp_path / "fakebin"
+    _write_fake_shipr(fakebin)
+    log = tmp_path / "shipr.log"
+
+    proc = _run(
+        ["ship", str(repo), "--skip-build", "--skip-tests", "--skip-live", "--json"],
+        env={"PATH": _path_with_fakebin(fakebin), "SHIP_TEST_LOG": str(log)},
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    for gate_id in ("shipr-model", "shipr-frontier", "shipr-attempt"):
+        gate = next(g for g in payload["gates"] if g["id"] == gate_id)
+        assert gate["status"] == "pass"
+    attempt = next(g for g in payload["gates"] if g["id"] == "shipr-attempt")
+    assert attempt["data"]["shipr_status"] == "ready"
+    assert (repo / ".shipr" / "release-attempts" / "fake-attempt.json").is_file()
+    assert "shipr model" in log.read_text()
+    assert "shipr attempt" in log.read_text()
 
 
 def test_ship_rejects_agent_custom_gate_kind(tmp_path: Path):

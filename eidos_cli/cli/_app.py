@@ -89,6 +89,7 @@ def _wire() -> None:
     from . import mcp as _mcp_cmd
     from . import migrate as _migrate_cmd
     from . import plugin as _plugin_cmd
+    from . import route as _route_cmd
     from . import ship as _ship_cmd
     from . import scope as _scope_cmd
     from . import spawn as _spawn_cmd
@@ -101,6 +102,7 @@ def _wire() -> None:
     _cleanup_cmd.register(app)
     _ship_cmd.register(app)
     _do_cmd.register(app)
+    _route_cmd.register(app)
     _spawn_cmd.register(app)
     _guide_cmd.register(app)
     _learn_cmd.register(app)

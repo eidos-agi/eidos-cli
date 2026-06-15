@@ -51,6 +51,11 @@ BUILTIN_GATE_IDS = {
     "eidos-plugin-run",
     "stepproof-audit",
     "agentic-first-doctrine",
+    "node-validate",
+    "node-build",
+    "shipr-model",
+    "shipr-frontier",
+    "shipr-attempt",
     "post-clean-artifact-scan",
 }
 
@@ -203,6 +208,16 @@ def _load_pyproject(repo: Path) -> dict[str, Any] | None:
     return tomllib.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_package_json(repo: Path) -> dict[str, Any] | None:
+    path = repo / "package.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
 def _load_ship_manifest(repo: Path) -> tuple[Path | None, dict[str, Any]]:
     path = repo / ".eidos" / "ship" / "manifest.toml"
     if not path.is_file():
@@ -239,6 +254,14 @@ def _manifest_learnings(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def _manifest_stepproof(manifest: dict[str, Any]) -> dict[str, Any]:
     return _manifest_table(manifest, "stepproof")
+
+
+def _manifest_shipr(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "shipr")
+
+
+def _manifest_node(manifest: dict[str, Any]) -> dict[str, Any]:
+    return _manifest_table(manifest, "node")
 
 
 def _manifest_builtin_gate_ids(manifest: dict[str, Any]) -> list[str] | None:
@@ -308,38 +331,57 @@ def _find_artifacts(repo: Path, manifest: dict[str, Any] | None = None) -> list[
     artifact_names = _artifact_names(manifest)
     artifact_paths = set(_list_value(_manifest_artifacts(manifest).get("generated_paths")))
     matches: list[str] = []
-    for path in repo.rglob("*"):
-        rel = path.relative_to(repo)
-        parts = set(rel.parts)
-        if ".git" in parts:
+    for root, dirs, files in os.walk(repo):
+        root_path = Path(root)
+        rel_root = root_path.relative_to(repo)
+        rel_root_text = "" if rel_root == Path(".") else str(rel_root)
+        if rel_root_text in artifact_paths:
+            matches.append(rel_root_text)
+            dirs[:] = []
             continue
-        rel_text = str(rel)
-        if (
-            path.name in artifact_names
-            or path.name.endswith(".egg-info")
-            or rel_text in artifact_paths
-        ):
-            matches.append(str(rel))
+
+        kept_dirs: list[str] = []
+        for name in dirs:
+            if name in {".git", "node_modules"}:
+                continue
+            rel = root_path.joinpath(name).relative_to(repo)
+            rel_text = str(rel)
+            if name in artifact_names or name.endswith(".egg-info") or rel_text in artifact_paths:
+                matches.append(rel_text)
+                continue
+            kept_dirs.append(name)
+        dirs[:] = kept_dirs
+
+        for name in files:
+            rel = root_path.joinpath(name).relative_to(repo)
+            rel_text = str(rel)
+            if name in artifact_names or name.endswith(".egg-info") or rel_text in artifact_paths:
+                matches.append(rel_text)
+        if len(matches) >= 200:
+            return sorted(matches)[:200]
     return sorted(matches)[:200]
 
 
 def _clean_artifacts(repo: Path, manifest: dict[str, Any] | None = None) -> None:
     manifest = manifest or {}
-    for name in _artifact_names(manifest):
-        for path in list(repo.rglob(name)):
-            if ".git" in path.relative_to(repo).parts:
+    artifact_names = _artifact_names(manifest)
+    for root, dirs, files in os.walk(repo, topdown=True):
+        root_path = Path(root)
+        kept_dirs: list[str] = []
+        for name in dirs:
+            if name in {".git", "node_modules"}:
                 continue
-            if path.is_dir():
+            path = root_path / name
+            if name in artifact_names or name.endswith(".egg-info"):
                 shutil.rmtree(path, ignore_errors=True)
-            elif path.exists():
+                continue
+            kept_dirs.append(name)
+        dirs[:] = kept_dirs
+
+        for name in files:
+            path = root_path / name
+            if name in artifact_names or name.endswith(".egg-info"):
                 path.unlink(missing_ok=True)
-    for egg_info in list(repo.rglob("*.egg-info")):
-        if ".git" in egg_info.relative_to(repo).parts:
-            continue
-        if egg_info.is_dir():
-            shutil.rmtree(egg_info, ignore_errors=True)
-        else:
-            egg_info.unlink(missing_ok=True)
     for rel in _list_value(_manifest_artifacts(manifest).get("generated_paths")):
         path = repo / rel
         if path.is_dir():
@@ -628,6 +670,206 @@ def _custom_gate(repo: Path, item: dict[str, Any]) -> Gate:
     )
 
 
+def _node_scripts(package_json: dict[str, Any] | None) -> dict[str, str]:
+    scripts = (package_json or {}).get("scripts")
+    return scripts if isinstance(scripts, dict) else {}
+
+
+def _node_env(manifest: dict[str, Any]) -> dict[str, str]:
+    configured = {
+        str(k): str(v)
+        for k, v in (_manifest_node(manifest).get("env") or {}).items()
+    }
+    # Public placeholder defaults let static/local builds prove route shape
+    # without requiring production secrets in an agent session.
+    defaults = {
+        "PUBLIC_SUPABASE_URL": "https://example.supabase.co",
+        "PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_ci_placeholder",
+        "CAPITAL_API_URL": "http://127.0.0.1:9",
+    }
+    defaults.update(configured)
+    return defaults
+
+
+def _node_validate_gate(repo: Path, package_json: dict[str, Any], manifest: dict[str, Any]) -> Gate:
+    scripts = _node_scripts(package_json)
+    candidates = _list_value(_manifest_node(manifest).get("validate_scripts"))
+    if not candidates:
+        candidates = sorted(name for name in scripts if name.startswith("validate:"))
+    if not candidates:
+        return Gate(
+            id="node-validate",
+            facet="node",
+            status="skip",
+            detail="No validate:* npm scripts found.",
+            cwd=str(repo),
+        )
+    missing = [name for name in candidates if name not in scripts]
+    if missing:
+        return Gate(
+            id="node-validate",
+            facet="node",
+            status="fail",
+            detail=f"Configured npm validation script(s) missing: {', '.join(missing)}",
+            cwd=str(repo),
+        )
+
+    command = " && ".join(f"npm run {name}" for name in candidates)
+    gate = _command_gate(
+        "node-validate",
+        "node",
+        ["bash", "--noprofile", "--norc", "-lc", command],
+        cwd=repo,
+        timeout=int(_manifest_node(manifest).get("validate_timeout") or 180),
+        env=_node_env(manifest),
+        pass_detail=f"Node validation script(s) passed: {', '.join(candidates)}.",
+        fail_detail=f"Node validation script(s) failed: {', '.join(candidates)}.",
+    )
+    gate.data["scripts"] = candidates
+    return gate
+
+
+def _node_build_gate(repo: Path, package_json: dict[str, Any], manifest: dict[str, Any]) -> Gate:
+    scripts = _node_scripts(package_json)
+    build_script = str(_manifest_node(manifest).get("build_script") or "build")
+    if build_script not in scripts:
+        return Gate(
+            id="node-build",
+            facet="node",
+            status="skip",
+            detail=f"No npm {build_script!r} script found.",
+            cwd=str(repo),
+        )
+    gate = _command_gate(
+        "node-build",
+        "node",
+        ["npm", "run", build_script],
+        cwd=repo,
+        timeout=int(_manifest_node(manifest).get("build_timeout") or 300),
+        env=_node_env(manifest),
+        pass_detail=f"npm run {build_script} passed.",
+        fail_detail=f"npm run {build_script} failed.",
+    )
+    gate.data["script"] = build_script
+    return gate
+
+
+def _shipr_available() -> bool:
+    return shutil.which("shipr") is not None
+
+
+def _shipr_enabled(repo: Path, manifest: dict[str, Any], explicit: bool = False) -> bool:
+    config = _manifest_shipr(manifest)
+    if config.get("enabled") is not None:
+        return bool(config["enabled"])
+    return explicit or (repo / ".shipr").is_dir()
+
+
+def _shipr_model_gate(repo: Path, manifest: dict[str, Any]) -> Gate:
+    if not _shipr_available():
+        return Gate(
+            id="shipr-model",
+            facet="shipr",
+            status="skip",
+            detail="shipr command is not installed.",
+            cwd=str(repo),
+        )
+    description = str(
+        _manifest_shipr(manifest).get("description")
+        or f"Eidos ship local proof gate for {repo.name}."
+    )
+    return _command_gate(
+        "shipr-model",
+        "shipr",
+        ["shipr", "model", "--project", str(repo), "--description", description, "--write", "--json"],
+        cwd=repo,
+        timeout=90,
+        pass_detail="Shipr product release model refreshed.",
+        fail_detail="Shipr product release model failed.",
+    )
+
+
+def _shipr_frontier_gate(repo: Path) -> Gate:
+    if not _shipr_available():
+        return Gate(
+            id="shipr-frontier",
+            facet="shipr",
+            status="skip",
+            detail="shipr command is not installed.",
+            cwd=str(repo),
+        )
+    return _command_gate(
+        "shipr-frontier",
+        "shipr",
+        ["shipr", "frontier", "--project", str(repo), "--json"],
+        cwd=repo,
+        timeout=60,
+        pass_detail="Shipr frontier reported current release state.",
+        fail_detail="Shipr frontier failed.",
+    )
+
+
+def _shipr_attempt_gate(
+    repo: Path,
+    manifest: dict[str, Any],
+    gates: list[Gate],
+) -> Gate:
+    if not _shipr_available():
+        return Gate(
+            id="shipr-attempt",
+            facet="shipr",
+            status="skip",
+            detail="shipr command is not installed.",
+            cwd=str(repo),
+        )
+    config = _manifest_shipr(manifest)
+    goal = str(config.get("goal") or f"Run eidos ship for {repo.name}")
+    failing = [gate.id for gate in gates if not gate.ok]
+    status = "ready" if not failing else "blocked"
+    proof = "; ".join(
+        " ".join(gate.command)
+        for gate in gates
+        if gate.command and gate.status != "skip"
+    )
+    if not proof:
+        proof = "eidos ship"
+    notes = (
+        str(config.get("notes"))
+        if config.get("notes")
+        else (
+            "All local shipment gates passed; public publish/deploy remains approval-gated."
+            if status == "ready"
+            else f"Blocked gates: {', '.join(failing)}"
+        )
+    )
+    gate = _command_gate(
+        "shipr-attempt",
+        "shipr",
+        [
+            "shipr",
+            "attempt",
+            "--project",
+            str(repo),
+            "--goal",
+            goal,
+            "--status",
+            status,
+            "--proof",
+            proof,
+            "--notes",
+            notes,
+            "--json",
+        ],
+        cwd=repo,
+        timeout=90,
+        pass_detail=f"Shipr release attempt recorded as {status}.",
+        fail_detail="Shipr release attempt recording failed.",
+    )
+    gate.data["shipr_status"] = status
+    gate.data["blocked_gates"] = failing
+    return gate
+
+
 def _stepproof_gate(repo: Path, manifest: dict[str, Any]) -> Gate:
     config = _manifest_stepproof(manifest)
     required = bool(config.get("required"))
@@ -729,6 +971,7 @@ def build_report(
     skip_tests: bool = False,
     skip_build: bool = False,
     skip_live: bool = False,
+    skip_shipr: bool = False,
     clean: bool = True,
 ) -> dict[str, Any]:
     repo = repo.expanduser().resolve()
@@ -745,6 +988,8 @@ def build_report(
         skip_build = bool(repo_manifest["skip_build"])
     if repo_manifest.get("skip_live") is not None:
         skip_live = bool(repo_manifest["skip_live"])
+    if repo_manifest.get("skip_shipr") is not None:
+        skip_shipr = bool(repo_manifest["skip_shipr"])
     if repo_manifest.get("clean") is not None:
         clean = bool(repo_manifest["clean"])
     builtin_gate_ids = _manifest_builtin_gate_ids(manifest)
@@ -754,10 +999,13 @@ def build_report(
         return include_all_builtins or gate_id in (builtin_gate_ids or [])
 
     pyproject = _load_pyproject(repo)
+    package_json = _load_package_json(repo)
     project_name = _project_name(pyproject) if pyproject else None
     facets = ["workspace"]
     if pyproject:
         facets.extend(["python-package", "cli"])
+    if package_json is not None:
+        facets.append("node")
     if (repo / ".codex-plugin" / "plugin.json").is_file():
         facets.append("codex-plugin")
     if marketplace is not None:
@@ -768,6 +1016,17 @@ def build_report(
         facets.append("stepproof")
     if wants("agentic-first-doctrine"):
         facets.append("agentic-first")
+    shipr_active = (not skip_shipr) and _shipr_enabled(repo, manifest)
+    if shipr_active:
+        facets.append("shipr")
+
+    def wants_node(gate_id: str) -> bool:
+        if _manifest_node(manifest).get("enabled") is False:
+            return False
+        return wants(gate_id) or package_json is not None
+
+    def wants_shipr(gate_id: str) -> bool:
+        return shipr_active and (wants(gate_id) or (repo / ".shipr").is_dir())
 
     gates: list[Gate] = []
     if wants("git-clean-pushed"):
@@ -807,6 +1066,11 @@ def build_report(
         gates.append(_felix_plugin_gate(repo))
     if wants("marketplace-check"):
         gates.append(_marketplace_check_gate(repo, marketplace.expanduser().resolve() if marketplace else None))
+    if package_json is not None:
+        if wants_node("node-validate"):
+            gates.append(_node_validate_gate(repo, package_json, manifest))
+        if not skip_build and wants_node("node-build"):
+            gates.append(_node_build_gate(repo, package_json, manifest))
     if not skip_live:
         live_gates = _live_plugin_gate(live_plugin, repo)
         if wants("eidos-plugin-show"):
@@ -824,6 +1088,14 @@ def build_report(
         post_artifacts.id = "post-clean-artifact-scan"
         gates.append(post_artifacts)
 
+    if shipr_active:
+        if wants_shipr("shipr-model"):
+            gates.append(_shipr_model_gate(repo, manifest))
+        if wants_shipr("shipr-frontier"):
+            gates.append(_shipr_frontier_gate(repo))
+        if wants_shipr("shipr-attempt"):
+            gates.append(_shipr_attempt_gate(repo, manifest, gates))
+
     payload = {
         "ok": all(g.ok for g in gates),
         "repo": str(repo),
@@ -831,7 +1103,11 @@ def build_report(
         "shipment_style": repo_manifest.get("style"),
         "agent_contract": AGENT_CONTRACT,
         "facets": sorted(set(facets)),
-        "project": {"name": project_name, "scripts": sorted(_scripts(pyproject).keys()) if pyproject else []},
+        "project": {
+            "name": project_name,
+            "scripts": sorted(_scripts(pyproject).keys()) if pyproject else [],
+            "node_scripts": sorted(_node_scripts(package_json).keys()) if package_json else [],
+        },
         "do_not": _list_value(_manifest_learnings(manifest).get("do_not")),
         "yes": _list_value(_manifest_learnings(manifest).get("yes")),
         "notes": _list_value(_manifest_learnings(manifest).get("notes")),
@@ -892,6 +1168,10 @@ def register(app: typer.Typer) -> None:
         skip_tests: Annotated[bool, typer.Option("--skip-tests", help="Skip Python test gate.")] = False,
         skip_build: Annotated[bool, typer.Option("--skip-build", help="Skip build/twine/wheel gates.")] = False,
         skip_live: Annotated[bool, typer.Option("--skip-live", help="Skip live installed plugin gates.")] = False,
+        skip_shipr: Annotated[
+            bool,
+            typer.Option("--skip-shipr", help="Skip Shipr model/frontier/attempt gates."),
+        ] = False,
         no_clean: Annotated[
             bool,
             typer.Option("--no-clean", help="Do not remove dist/build/egg-info artifacts after build gates."),
@@ -918,6 +1198,7 @@ def register(app: typer.Typer) -> None:
             skip_tests=skip_tests,
             skip_build=skip_build,
             skip_live=skip_live,
+            skip_shipr=skip_shipr,
             clean=not no_clean,
         )
         _, manifest = _load_ship_manifest(repo)

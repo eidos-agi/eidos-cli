@@ -5,3 +5,5 @@ build/
 .eggs/
 *.pyc
 .mcp.json
+.shipr/
+.eidos/ship/shipments/
