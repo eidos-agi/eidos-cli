@@ -538,6 +538,30 @@ def test_closeout_passes_for_clean_repo(tmp_path: Path):
     assert payload["stepproof"][0]["status"] == "absent"
 
 
+def test_closeout_reports_catalog_drift_without_blocking_local_closeout(tmp_path: Path):
+    from eidos_cli.cli import closeout
+
+    repo = tmp_path / "demo-plugin"
+    repo.mkdir()
+    _init_git_repo(repo)
+    (repo / ".codex-plugin").mkdir()
+    (repo / ".codex-plugin" / "plugin.json").write_text('{"name": "demo-plugin", "version": "0.1.0"}\n')
+    subprocess.run(["git", "add", "."], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "plugin manifest"], cwd=repo, check=True, capture_output=True, text=True)
+
+    with patch(
+        "eidos_cli.cli.closeout._load_local_capability_registry",
+        return_value=({"kind": "eidos.capability-registry", "plugins": []}, "test-registry.json"),
+    ):
+        report = closeout.build_report(str(repo), [], include_codex_marketplace=False)
+
+    assert report["ok"] is True
+    item = report["catalog_drift"]["items"][0]
+    assert item["slug"] == "demo-plugin"
+    assert item["severity"] == "warning"
+    assert item["status"] == "missing"
+
+
 def test_closeout_fails_for_dirty_repo(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -1324,6 +1348,114 @@ def test_do_marks_production_migration_as_requiring_stepproof(temp_eidos):
     assert "step-proof-required" in payload["cardinality"]["triggers_fired"]
     context = json.loads(Path(payload["context_bundle"]).read_text())
     assert context["cardinality"]["requires_step_proof"] is True
+
+
+def test_do_emits_foreman_ready_pod_packets_for_pod_cardinality(temp_eidos):
+    home, _ = temp_eidos
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9003-pod.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9003",
+                "title: Interactive production migration",
+                "tags:",
+                "  - migration",
+                "files_in_scope:",
+                "  - eidos_cli/cli/do.py",
+                "files_out_of_scope:",
+                "  - secrets/",
+                "verification_command: pytest tests/test_smoke.py -q",
+                "definition-of-done:",
+                "  - packet emitted",
+                "---",
+                "First time interactive watchable migration work that may need interrupt support.",
+            ]
+        )
+    )
+
+    proc = _run(["do", "TASK-9003", "--json"], cwd=home)
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    assert payload["cardinality"]["cardinality"] == "pod"
+    packet_path = Path(payload["pod_packets"]["path"])
+    packet_bundle = json.loads(packet_path.read_text())
+    packet = packet_bundle["packets"][0]
+    assert packet["recommended_engine"] == "claude-emux"
+    assert "foreman" in packet["specialist_stack"]
+    assert "emux" in packet["specialist_stack"]
+    assert packet["files_in_scope"] == ["eidos_cli/cli/do.py"]
+    assert "emux interrupt command" in packet["proof_artifacts_expected"]
+
+
+def test_do_continue_accepts_required_stepproof_evidence(temp_eidos):
+    home, _ = temp_eidos
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9004-stepproof.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9004",
+                "title: Run production migration with StepProof",
+                "tags:",
+                "  - migration",
+                "definition-of-done:",
+                "  - migration proof attached",
+                "---",
+                "Run the production migration with StepProof ceremony.",
+            ]
+        )
+    )
+
+    first = _run(["do", "TASK-9004", "--json"], cwd=home)
+    assert first.returncode == 0, first.stderr
+    first_payload = json.loads(first.stdout)
+    evidence = Path(first_payload["evidence_bundle"])
+    (evidence / "summary.md").write_text("migration proof attached\n")
+    (evidence / "stepproof-audit.json").write_text(
+        json.dumps({"stepproof": {"audit": {"ok": True, "verified": True}}})
+    )
+
+    proc = _run(["do", "--continue", "TASK-9004", "--evidence", str(evidence), "--json"], cwd=home)
+
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    payload = json.loads(proc.stdout)
+    gates = {gate["id"]: gate for gate in payload["verify"]["proof_gates"]}
+    assert gates["stepproof"]["required"] is True
+    assert gates["stepproof"]["ok"] is True
+
+
+def test_verify_requires_converge_evidence_when_task_names_converge(temp_eidos):
+    from eidos_cli.orchestrator.perceive import perceive
+    from eidos_cli.orchestrator.verify import verify
+
+    home, _ = temp_eidos
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9005-converge.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9005",
+                "title: Add Converge target rows",
+                "definition-of-done:",
+                "  - target rows attached",
+                "---",
+                "Attach Converge target rows and scoreboard proof.",
+            ]
+        )
+    )
+    evidence = home / ".eidos" / "docket" / "evidence" / "TASK-9005"
+    evidence.mkdir(parents=True)
+    (evidence / "summary.md").write_text("target rows attached\n")
+
+    ctx = perceive(home, "TASK-9005")
+    result = verify(ctx, evidence, "pod")
+
+    assert result.passed is False
+    gates = {gate["id"]: gate for gate in result.proof_gates}
+    assert gates["converge"]["required"] is True
+    assert gates["converge"]["ok"] is False
 
 
 def test_do_emits_agentic_first_preflight(temp_eidos):

@@ -178,14 +178,48 @@ def build_report(source_roots: list[Path], plugin_root: Path, cache_root: Path) 
     }
 
 
-def _format(report: dict[str, Any]) -> str:
+def _format(report: dict[str, Any], *, verbose: bool = False) -> str:
+    surfaces = report["surfaces"]
+    blockers = report["blockers"]
+    clean_sources = sum(
+        1 for item in surfaces if item["kind"] == "canonical-source" and item["status"] == "clean"
+    )
+    clean_derivatives = sum(
+        1
+        for item in surfaces
+        if item["kind"] in {"local-plugin-mirror", "installed-cache"} and item["status"] == "derivative"
+    )
+
     lines = [
         f"Cleanup verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}",
         report["goal"],
+        f"Summary: {clean_sources} clean source repos, {clean_derivatives} clean derivative surfaces, {len(blockers)} blockers.",
         "",
-        "Surfaces:",
     ]
-    for item in report["surfaces"]:
+
+    if verbose:
+        lines.append("Surfaces:")
+        for item in surfaces:
+            lines.append(f"- {item['status'].upper()} {item['kind']} {item['path']}")
+            git = item.get("git") or {}
+            if git.get("is_git"):
+                lines.append(
+                    f"  branch={git.get('branch') or '-'} upstream={git.get('upstream') or '-'} "
+                    f"ahead={git.get('ahead')} behind={git.get('behind')} dirty={git.get('dirty_count')}"
+                )
+            lines.append(
+                f"  source_of_truth={item['source_of_truth']} installable_surface={item['installable_surface']}"
+            )
+            for action in item.get("next_actions", [])[:3]:
+                lines.append(f"  next: {action}")
+        return "\n".join(lines)
+
+    if not blockers:
+        lines.append("No cleanup required.")
+        return "\n".join(lines)
+
+    lines.append("Blockers:")
+    for item in blockers:
         lines.append(f"- {item['status'].upper()} {item['kind']} {item['path']}")
         git = item.get("git") or {}
         if git.get("is_git"):
@@ -193,8 +227,7 @@ def _format(report: dict[str, Any]) -> str:
                 f"  branch={git.get('branch') or '-'} upstream={git.get('upstream') or '-'} "
                 f"ahead={git.get('ahead')} behind={git.get('behind')} dirty={git.get('dirty_count')}"
             )
-        lines.append(f"  source_of_truth={item['source_of_truth']} installable_surface={item['installable_surface']}")
-        for action in item.get("next_actions", [])[:3]:
+        for action in item.get("next_actions", [])[:2]:
             lines.append(f"  next: {action}")
     return "\n".join(lines)
 
@@ -214,6 +247,10 @@ def register(app: typer.Typer) -> None:
             str,
             typer.Option("--cache-root", help="Codex installed plugin cache root."),
         ] = "~/.codex/plugins/cache/eidos-agi",
+        verbose: Annotated[
+            bool,
+            typer.Option("--verbose", help="Show all surfaces, including clean ones."),
+        ] = False,
         json_: Annotated[bool, typer.Option("--json", "-J", help="JSON output.")] = False,
     ) -> None:
         """Audit plugin/tool cleanup toward portable Codex installation.
@@ -228,7 +265,6 @@ def register(app: typer.Typer) -> None:
             else [Path("~/repos-eidos-agi"), Path("~/repos-personal")]
         )
         report = build_report(roots, Path(plugin_root), Path(cache_root))
-        typer.echo(json.dumps(report, indent=2, default=str) if json_ else _format(report))
+        typer.echo(json.dumps(report, indent=2, default=str) if json_ else _format(report, verbose=verbose))
         if not report["ok"]:
             raise typer.Exit(code=1)
-

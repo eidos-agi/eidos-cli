@@ -35,6 +35,7 @@ from ..orchestrator.envelope import (
 )
 from ..orchestrator.learn import log_plugin_candidate, route_sor, write_praxis_turn
 from ..orchestrator.perceive import perceive
+from ..orchestrator.pod_packets import build_pod_packet_bundle
 from ..orchestrator.verify import verify as run_verify
 from ..scope.manifest import find_eidos_dir, load_manifest, save_manifest
 from ..scope.resolver import resolve_from_cwd, resolve_home_from_path
@@ -171,6 +172,16 @@ def register(app: typer.Typer) -> None:
         evidence_dir = eidos_dir / "docket" / "evidence" / task_id
         evidence_dir.mkdir(parents=True, exist_ok=True)
 
+        pod_packets = build_pod_packet_bundle(
+            ctx,
+            decision,
+            context_dir=ctx_dir,
+            evidence_dir=evidence_dir,
+        )
+        if pod_packets:
+            ctx_payload["pod_packets"] = pod_packets
+            ctx_file.write_text(_json.dumps(ctx_payload, indent=2, default=str))
+
         # Compute and save the continuation envelope.
         sor_path = eidos_dir / "governor" / "sops" / "sor_routing.md"
         env = compute_envelope(
@@ -217,6 +228,8 @@ def register(app: typer.Typer) -> None:
                 f"`eidos do --continue {task_id} --evidence {evidence_dir}`."
             ),
         }
+        if pod_packets:
+            result["pod_packets"] = pod_packets
         if decision.requires_step_proof:
             result["step_proof"] = {
                 "required": True,
@@ -252,6 +265,13 @@ def register(app: typer.Typer) -> None:
             "evidence bundle:   " + str(evidence_dir),
             "continuation:      " + str(env_path),
         ]
+        if pod_packets:
+            lines.extend(
+                [
+                    "pod packets:       " + str(pod_packets["path"]),
+                    "foreman handoff:   foreman delegate --engine <engine> --packet <packet-json>",
+                ]
+            )
         if ctx.matched_plugins:
             lines.append("")
             lines.append(f"matched plugins ({len(ctx.matched_plugins)}):")
@@ -353,7 +373,12 @@ def _run_continue(
 
     # VERIFY against the evidence bundle.
     ev_path = Path(evidence).expanduser().resolve()
-    vresult = run_verify(ctx, ev_path, saved.cardinality)
+    vresult = run_verify(
+        ctx,
+        ev_path,
+        saved.cardinality,
+        requires_step_proof=saved.requires_step_proof,
+    )
 
     if vresult.failed_closed:
         # High-stakes verification can't pass on Solo judgment; surface block.
