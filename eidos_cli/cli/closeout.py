@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Annotated, Optional
+from typing import Annotated, Any, Optional
 
 import typer
 
@@ -299,8 +299,203 @@ def _agentic_first_check(paths: list[Path]) -> dict:
     return result
 
 
-def _format(report: dict) -> str:
-    lines = [f"Closeout verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}", "", "Git repositories:"]
+def _catalog_drift_check(paths: list[Path]) -> dict[str, Any]:
+    registry, source = _load_local_capability_registry()
+    result: dict[str, Any] = {
+        "kind": "catalog-drift",
+        "ok": True,
+        "status": "ok",
+        "registry_source": source,
+        "items": [],
+        "detail": "No blocking catalog drift found.",
+    }
+    plugins = {
+        plugin.get("slug"): plugin
+        for plugin in (registry.get("plugins", []) if registry else [])
+        if isinstance(plugin, dict) and plugin.get("slug")
+    }
+    seen: set[str] = set()
+    for path in paths:
+        root = _git_root(path)
+        if root is None:
+            continue
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        slug, version = _plugin_identity(root)
+        if not slug:
+            continue
+        item = _catalog_drift_item(root, slug, version, plugins.get(slug), source)
+        result["items"].append(item)
+
+    if any(item["severity"] == "blocker" for item in result["items"]):
+        result.update(ok=False, status="blocked", detail="Catalog drift includes blockers.")
+    elif any(item["severity"] == "warning" for item in result["items"]):
+        result.update(status="warning", detail="Catalog drift includes warnings.")
+    elif result["items"]:
+        result.update(status="advisory", detail="Catalog entries match local source metadata.")
+    return result
+
+
+def _load_local_capability_registry() -> tuple[dict[str, Any] | None, str | None]:
+    candidates = [
+        Path.cwd() / "src" / "data" / "capability-registry.generated.json",
+        Path.cwd().parent / "eidosagi.com" / "src" / "data" / "capability-registry.generated.json",
+        Path.cwd().parent / "eidos-plugin-store" / "examples" / "capability-registry.sample.json",
+        Path("/Users/dshanklin/repos-eidos-agi/eidosagi.com/src/data/capability-registry.generated.json"),
+        Path("/Users/dshanklin/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+        Path("/Volumes/MacMiniStorage/Eidos/repos-eidos-agi/eidosagi.com/src/data/capability-registry.generated.json"),
+        Path("/Volumes/MacMiniStorage/Eidos/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+    ]
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            return json.loads(path.read_text()), str(path)
+        except json.JSONDecodeError:
+            continue
+    return None, None
+
+
+def _plugin_identity(root: Path) -> tuple[str | None, str | None]:
+    manifest_path = root / ".codex-plugin" / "plugin.json"
+    if not manifest_path.is_file():
+        return None, None
+    try:
+        manifest = json.loads(manifest_path.read_text())
+    except json.JSONDecodeError:
+        return None, None
+    name = manifest.get("name")
+    slug = str(name).strip() if isinstance(name, str) and name.strip() else root.name
+    version = manifest.get("version")
+    return slug, str(version) if isinstance(version, str) else None
+
+
+def _catalog_drift_item(
+    root: Path,
+    slug: str,
+    version: str | None,
+    registry_entry: dict[str, Any] | None,
+    registry_source: str | None,
+) -> dict[str, Any]:
+    if registry_entry is None:
+        severity = "warning" if registry_source else "advisory"
+        detail = (
+            "plugin is not represented in the local capability registry"
+            if registry_source
+            else "no local capability registry found for drift comparison"
+        )
+        return {
+            "slug": slug,
+            "path": str(root),
+            "severity": severity,
+            "status": "missing" if registry_source else "unchecked",
+            "detail": detail,
+        }
+
+    install = registry_entry.get("install_status", {})
+    source_repo = install.get("source", {}).get("repo")
+    public_status = install.get("public_catalog", {}).get("status")
+    live_version = install.get("live_version")
+    details: list[str] = []
+    severity = "advisory"
+    if source_repo and root.name not in str(source_repo):
+        severity = "warning"
+        details.append(f"registry source repo {source_repo!r} does not match local repo name {root.name!r}")
+    if public_status not in {"listed", "not_listed", "unknown"}:
+        severity = "warning"
+        details.append(f"registry public catalog status is invalid: {public_status!r}")
+    if version and live_version and version != live_version:
+        severity = "warning"
+        details.append(f"local version {version} differs from registry live_version {live_version}")
+    if not details:
+        details.append("registry entry found; source, public status, and version metadata are comparable")
+    return {
+        "slug": slug,
+        "path": str(root),
+        "severity": severity,
+        "status": "ok" if severity == "advisory" else "drift",
+        "detail": "; ".join(details),
+    }
+
+
+def _format(report: dict, *, verbose: bool = False) -> str:
+    failed_git = [check for check in report["git"] if not check["ok"]]
+    missing_marketplace = report["codex_marketplace"].get("missing", [])
+    incomplete_runs = report["plugin_runs"].get("incomplete", [])
+    agentic_failures = [repo for repo in report["agentic_first"].get("repos", []) if not repo["ok"]]
+    stepproof_failures = [sp for sp in report.get("stepproof", []) if not sp["ok"]]
+    catalog_items = report.get("catalog_drift", {}).get("items", [])
+    catalog_blockers = [item for item in catalog_items if item.get("severity") == "blocker"]
+    catalog_warnings = [item for item in catalog_items if item.get("severity") == "warning"]
+
+    lines = [
+        f"Closeout verdict: {'PASS' if report['ok'] else 'NEEDS ATTENTION'}",
+        "",
+        f"Summary: {len(failed_git)} dirty git repos, {len(missing_marketplace)} missing marketplace entries, "
+        f"{len(incomplete_runs)} incomplete plugin runs, {len(agentic_failures)} agentic-first failures, "
+        f"{len(stepproof_failures)} StepProof failures, {len(catalog_blockers)} catalog blockers, "
+        f"{len(catalog_warnings)} catalog warnings.",
+    ]
+
+    if verbose:
+        _format_verbose_sections(report, lines)
+        return "\n".join(lines)
+
+    if failed_git:
+        lines.append("")
+        lines.append("Git blockers:")
+        for check in failed_git:
+            lines.append(f"- {check['path']}")
+            if check.get("status") != "not-git":
+                lines.append(
+                    f"  branch={check.get('branch')} upstream={check.get('upstream') or '-'} "
+                    f"ahead={check.get('ahead')} behind={check.get('behind')} "
+                    f"modified={check.get('modified_count')} untracked={check.get('untracked_count')}"
+                )
+            else:
+                lines.append(f"  {check['detail']}")
+
+    if missing_marketplace:
+        lines.append("")
+        lines.append("Marketplace blockers:")
+        for missing in missing_marketplace[:10]:
+            lines.append(f"- {missing['name']}: {missing['path']}")
+
+    if incomplete_runs:
+        lines.append("")
+        lines.append("Plugin-run blockers:")
+        for incomplete in incomplete_runs[:10]:
+            lines.append(f"- {incomplete['path']}: {incomplete['detail']}")
+
+    if agentic_failures:
+        lines.append("")
+        lines.append("Agentic-first blockers:")
+        for repo in agentic_failures[:10]:
+            lines.append(
+                f"- {repo['path']}: code={len(repo.get('dirty_code_changes', []))} "
+                f"protocol={len(repo.get('agentic_protocol_changes', []))} "
+                f"unpushed_code={len(repo.get('unpushed_code_changes', []))}"
+            )
+
+    if stepproof_failures:
+        lines.append("")
+        lines.append("StepProof blockers:")
+        for sp in stepproof_failures[:10]:
+            lines.append(f"- {sp['path']}: {sp.get('detail')}")
+
+    if catalog_blockers or catalog_warnings:
+        lines.append("")
+        lines.append("Catalog drift:")
+        for item in (catalog_blockers + catalog_warnings)[:10]:
+            lines.append(f"- {item['severity'].upper()} {item['slug']}: {item['detail']}")
+
+    return "\n".join(lines)
+
+
+def _format_verbose_sections(report: dict, lines: list[str]) -> None:
+    lines.extend(["", "Git repositories:"])
     for check in report["git"]:
         marker = "PASS" if check["ok"] else "FAIL"
         lines.append(f"- {marker} {check['path']}")
@@ -351,7 +546,9 @@ def _format(report: dict) -> str:
             lines.append(
                 f"  active_run={active.get('run_id')} step={active.get('current_step') or '-'}"
             )
-    return "\n".join(lines)
+    lines.extend(["", "Catalog drift:"])
+    for item in report.get("catalog_drift", {}).get("items", []):
+        lines.append(f"- {item['severity'].upper()} {item['slug']}: {item['detail']}")
 
 
 def build_report(path: Optional[str], repos: list[str], include_codex_marketplace: bool) -> dict:
@@ -365,12 +562,14 @@ def build_report(path: Optional[str], repos: list[str], include_codex_marketplac
     plugin_runs = _plugin_runs_check(repo_paths)
     agentic_first = _agentic_first_check(repo_paths)
     stepproof_checks = [stepproof.check_repo(p) for p in repo_paths]
+    catalog_drift = _catalog_drift_check(repo_paths)
     ok = (
         all(check["ok"] for check in git_checks)
         and codex_marketplace["ok"]
         and plugin_runs["ok"]
         and agentic_first["ok"]
         and all(check["ok"] for check in stepproof_checks)
+        and catalog_drift["ok"]
     )
     return {
         "ok": ok,
@@ -379,6 +578,7 @@ def build_report(path: Optional[str], repos: list[str], include_codex_marketplac
         "plugin_runs": plugin_runs,
         "agentic_first": agentic_first,
         "stepproof": stepproof_checks,
+        "catalog_drift": catalog_drift,
     }
 
 
@@ -397,6 +597,10 @@ def register(app: typer.Typer) -> None:
             bool,
             typer.Option("--no-codex-marketplace", help="Skip Codex marketplace pointer checks."),
         ] = False,
+        verbose: Annotated[
+            bool,
+            typer.Option("--verbose", help="Show all repositories and checks, including passes."),
+        ] = False,
         json_: Annotated[bool, typer.Option("--json", "-J", help="Compact JSON output.")] = False,
     ) -> None:
         """Check whether a mission is clean enough to close.
@@ -406,6 +610,6 @@ def register(app: typer.Typer) -> None:
         before an agent claims the work is done.
         """
         report = build_report(path, repo, not no_codex_marketplace)
-        typer.echo(json.dumps(report, indent=2) if json_ else _format(report))
+        typer.echo(json.dumps(report, indent=2) if json_ else _format(report, verbose=verbose))
         if not report["ok"]:
             raise typer.Exit(code=1)

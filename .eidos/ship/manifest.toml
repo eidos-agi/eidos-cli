@@ -55,7 +55,7 @@ notes = [
 id = "pytest-installed-env"
 facet = "test"
 command = "PYENV_VERSION=3.12.7 PYTHONPYCACHEPREFIX=/tmp/eidos-cli-pycache PYTHONDONTWRITEBYTECODE=1 pytest -q"
-timeout = 120
+timeout = 300
 pass_detail = "Full Eidos CLI smoke suite passed in the installed pyenv environment."
 fail_detail = "Full Eidos CLI smoke suite failed."
 

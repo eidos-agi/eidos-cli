@@ -76,7 +76,10 @@ def activate_for_eidos(eidos_home: Path, active_forges: list[str]) -> None:
             # legacy path so commands keep working against .<forge>/.
             continue
         module_path, const_name, _legacy = _FORGE_CONSTANTS[forge]
-        _set_constant(module_path, const_name, f"{EIDOS_DIR}/{forge}")
+        value = f"{EIDOS_DIR}/{forge}"
+        _set_constant(module_path, const_name, value)
+        _set_secondary_constants(forge, const_name, value)
+        _register_project_if_supported(forge, eidos_home)
 
 
 def init_forge_project(
@@ -152,3 +155,33 @@ def _today() -> str:
     from datetime import date
 
     return date.today().isoformat()
+
+
+def _register_project_if_supported(forge: str, eidos_home: Path) -> None:
+    """Register the eidos home with forge libraries that keep a project registry."""
+    if forge != "docket":
+        return
+    try:
+        from docket_md.config import register_project
+
+        register_project(str(eidos_home))
+    except Exception:
+        # Registration is an affordance for forge CLI compatibility. If a
+        # future docket-md version changes this surface, leave command startup
+        # alive and let the downstream command report its own error.
+        return
+
+
+def _set_secondary_constants(forge: str, const_name: str, value: str) -> None:
+    """Patch modules that imported a forge path constant by value."""
+    if forge != "docket":
+        return
+    for module_path in (
+        "docket_md._logic.bookmark",
+        "docket_md._logic.task",
+        "docket_md.files",
+    ):
+        try:
+            _set_constant(module_path, const_name, value)
+        except Exception:
+            continue
