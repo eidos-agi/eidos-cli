@@ -44,7 +44,7 @@ problem, prefer it over new software.
 In practice, Eidos has three modes:
 
 1. Orient
-   Use `eidos guide`, `eidos status`, and `eidos health` to understand the current eidos before acting.
+   Use `eidos guide`, `eidos status`, `eidos health`, and `eidos doctor` to understand the current eidos before acting.
 
 2. Execute
    Use `eidos do <task-id>` and `eidos do --continue <task-id> --evidence <path>` when the user gives a docket task or asks to operate the Eidos loop.
@@ -55,7 +55,7 @@ In practice, Eidos has three modes:
 Operationally:
 
 - Start with `eidos guide` for broad orientation.
-- Use `eidos status` or `eidos health` for current operating state.
+- Use `eidos status`, `eidos health`, or `eidos doctor` for current operating state and local agent readiness.
 - Use `eidos do <task-id>` when the user is asking to work a docket task through the Eidos loop.
 - Use `eidos cleanup` when the user asks whether plugin/tool repos, local mirrors, or Codex cache copies are dirty, pushed, or portable to another Mac.
 - Use `eidos closeout` before claiming the mission is closed.
@@ -106,6 +106,7 @@ eidos guide loop
 eidos scope --json
 eidos status
 eidos health
+eidos doctor
 eidos do <task-id>
 eidos do --continue <task-id> --evidence <path>
 eidos cleanup

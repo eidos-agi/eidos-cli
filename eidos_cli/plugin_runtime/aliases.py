@@ -35,6 +35,7 @@ RESERVED_PRIMITIVES: frozenset[str] = frozenset(
         "auth",
         "vault",
         "health",
+        "doctor",
         "mcp",
         "plugin",
         "learn",

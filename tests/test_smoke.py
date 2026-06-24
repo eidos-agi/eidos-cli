@@ -124,6 +124,85 @@ def test_define_refuses_empty_telos_fields(tmp_path):
     assert "success_when" in (proc.stderr + proc.stdout)
 
 
+# ── health / doctor ────────────────────────────────────────────────────────
+
+
+def test_doctor_json_reports_agent_surfaces(tmp_path: Path):
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('service_tier = "default"\n')
+    fakebin = tmp_path / "bin"
+    fakebin.mkdir()
+    fake_codex = fakebin / "codex"
+    fake_codex.write_text("#!/bin/sh\nexit 0\n")
+    fake_codex.chmod(0o755)
+
+    proc = _run(
+        ["doctor", "--json"],
+        env={
+            "CODEX_HOME": str(codex_home),
+            "PATH": f"{fakebin}{os.pathsep}{os.environ['PATH']}",
+        },
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    checks = {check["id"]: check for check in payload["checks"]}
+    assert {"vault", "codex-cli", "taskr", "faculties"} <= set(checks)
+    assert checks["codex-cli"]["status"] == "warn"
+    assert checks["codex-cli"]["config_path"] == str(codex_home / "config.toml")
+    assert "service_tier" in checks["codex-cli"]["detail"]
+
+
+def test_codex_cli_check_warns_on_invalid_service_tier(tmp_path: Path):
+    from eidos_cli.cli import health
+
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir()
+    (codex_home / "config.toml").write_text('service_tier = "default"\n')
+
+    with patch.dict(os.environ, {"CODEX_HOME": str(codex_home)}), patch(
+        "eidos_cli.cli.health.shutil.which", return_value="/usr/local/bin/codex"
+    ):
+        check = health._codex_cli_check()
+
+    assert check["status"] == "warn"
+    assert check["config_path"] == str(codex_home / "config.toml")
+    assert "default" in check["detail"]
+
+
+def test_taskr_check_missing_commands_warns():
+    from eidos_cli.cli import health
+
+    with patch("eidos_cli.cli.health.shutil.which", return_value=None):
+        check = health._taskr_check()
+
+    assert check["status"] == "warn"
+    assert check["missing"] == [
+        "skillflow_execute",
+        "taskr_triage",
+        "taskr_governance_approve",
+    ]
+
+
+def test_faculty_check_warns_for_specialist_plugin_without_metadata(tmp_path: Path):
+    from eidos_cli.cli import health
+    from eidos_cli.plugin_runtime.store import PluginRef
+
+    plugin = PluginRef(
+        slug="cept",
+        path=tmp_path / "cept",
+        scope="global",
+        manifest={"slug": "cept", "description": "Agent proprioception"},
+    )
+
+    with patch("eidos_cli.plugin_runtime.store.list_plugins", return_value=[plugin]):
+        check = health._faculty_check()
+
+    assert check["status"] == "warn"
+    assert check["missing"][0]["slug"] == "cept"
+
+
 def test_define_refuses_existing_eidos(temp_eidos):
     home, _ = temp_eidos
     proc = _run(

@@ -35,6 +35,7 @@ eidos guide
 eidos scope --json
 eidos status
 eidos health
+eidos doctor
 ```
 
 Execute:
@@ -70,6 +71,8 @@ External workflow CLIs such as Taskr or `skillflow_execute` are optional
 surfaces for this plugin unless they are installed and expose a live smoke
 command. Missing optional tools should be reported as warnings, then replaced
 with runnable Eidos gates: `eidos health`, `eidos ship`, and `eidos closeout`.
+Use `eidos doctor` when the question is specifically whether the local Codex
+agent surface is ready.
 
 ## Agentic-First Doctrine
 
@@ -159,6 +162,7 @@ eidos --help
 eidos scope --json
 eidos status
 eidos health
+eidos doctor
 eidos do --help
 eidos closeout
 eidos plugin list

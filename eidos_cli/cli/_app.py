@@ -16,7 +16,7 @@ app = typer.Typer(
         "\n"
         "eidos — unified agent surface for the Eidos scope architecture.\n"
         "\n"
-        "SCOPE:        eidos scope | define ... | enter | status | activate | close | closeout | cleanup | ship(manifest) | spawn | tick\n"
+        "SCOPE:        eidos scope | define ... | enter | status | health | doctor | activate | close | closeout | cleanup | ship(manifest) | spawn | tick\n"
         "LOOP:         eidos do <task-id>          (PERCEIVE → CARDINALITY → … → LEARN)\n"
         "FORGES:       eidos telos ... | research ... | governor ... | docket ... | praxis ...\n"
         "PLUGINS:      eidos plugin list | install | run | show     |   eidos learn\n"

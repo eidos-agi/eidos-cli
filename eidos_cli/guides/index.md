@@ -27,6 +27,7 @@ SCOPE:        eidos define <path>    — bring an eidos into being
               eidos scope            — inspect scope resolution without requiring one
               eidos enter            — open a session, emit briefing
               eidos status           — one-line health snapshot
+              eidos doctor           — local agent prerequisite checks
               eidos activate <forge> — scaffold a dormant forge
               eidos tick             — drift-against-telos snapshot
               eidos closeout         — prove repos/plugins are clean before closing
