@@ -647,6 +647,17 @@ def test_closeout_uses_configured_eidos_marketplace_source(tmp_path: Path):
     assert payload["codex_marketplace"]["checked"] == 1
 
 
+def test_closeout_ignores_git_marketplace_source(tmp_path: Path):
+    from eidos_cli.cli.closeout import _configured_eidos_marketplace_source
+
+    config = tmp_path / "config.toml"
+    config.write_text(
+        '[marketplaces.eidos-agi]\nsource_type = "git"\nsource = "https://github.com/eidos-agi/eidos-marketplace.git"\n'
+    )
+
+    assert _configured_eidos_marketplace_source(config) is None
+
+
 def test_closeout_catches_incomplete_plugin_run(tmp_path: Path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -1663,6 +1674,72 @@ def test_perceive_matches_required_plugin(temp_eidos):
     # Playbook should be copied into the context bundle.
     ctx_dir = home / ".eidos" / "docket" / "contexts" / "TASK-0001"
     assert (ctx_dir / "plugins" / "learn.md").is_file()
+
+
+def test_perceive_recommends_faculty_from_matched_plugin(temp_eidos):
+    """A matched plugin with faculty metadata becomes an explicit subagent route."""
+    home, _ = temp_eidos
+    plugin_dir = home / ".eidos" / "plugins" / "zoltar"
+    plugin_dir.mkdir(parents=True)
+    plugin_dir.joinpath("plugin.yaml").write_text(
+        "\n".join(
+            [
+                "slug: zoltar",
+                "version: 0.1.0",
+                "description: Foresight research subagent.",
+                "when_to_fire:",
+                "  - use researched future-cone analysis before shipping",
+                "owner_forge: research",
+                "tags:",
+                "  - foresight",
+                "  - second-order",
+                "required_evidence:",
+                "  - evidence_checked",
+                "  - likely_user_complaint",
+                "faculty:",
+                "  role: foresight research subagent",
+                "  invoke_as: zoltar",
+                "  handoff: decide what is likely to be regretted before ACT",
+                "",
+            ]
+        )
+    )
+    plugin_dir.joinpath("playbook.md").write_text(
+        "# Zoltar\n\nInspect evidence, predict the likely complaint, and name the change today.\n"
+    )
+
+    task = home / ".eidos" / "docket" / "tasks" / "TASK-9003-zoltar.md"
+    task.write_text(
+        "\n".join(
+            [
+                "---",
+                "id: TASK-9003",
+                "title: Predict likely future complaints",
+                "owner_forge: research",
+                "tags:",
+                "  - foresight",
+                "---",
+                "Use second-order thinking to prevent a future user complaint.",
+            ]
+        )
+    )
+
+    proc = _run(["do", "TASK-9003", "--json"], cwd=home)
+
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout)
+    faculties = payload.get("recommended_faculties") or []
+    assert len(faculties) == 1
+    assert faculties[0]["slug"] == "zoltar"
+    assert faculties[0]["invoke_as"] == "zoltar"
+    assert faculties[0]["role"] == "foresight research subagent"
+    assert faculties[0]["handoff"] == "decide what is likely to be regretted before ACT"
+    assert faculties[0]["required"] is False
+    assert faculties[0]["required_evidence"] == ["evidence_checked", "likely_user_complaint"]
+    assert "owner_forge match (research)" in faculties[0]["reasons"]
+    assert "tag overlap: ['foresight']" in faculties[0]["reasons"]
+    context = json.loads(Path(payload["context_bundle"]).read_text())
+    assert context["recommended_faculties"] == faculties
 
 
 def test_perceive_no_match_when_no_signals(temp_eidos):

@@ -42,7 +42,11 @@ def _git_check(path: Path) -> dict:
             "detail": "No git repository found at or above this path.",
         }
 
-    porcelain = _run(["git", "status", "--porcelain=v1"], root).stdout.splitlines()
+    porcelain = [
+        line
+        for line in _run(["git", "status", "--porcelain=v1"], root).stdout.splitlines()
+        if not _is_runtime_state_path(parse_porcelain_path(line))
+    ]
     branch = _run(["git", "branch", "--show-current"], root).stdout.strip()
     head = _run(["git", "rev-parse", "--short", "HEAD"], root).stdout.strip()
     upstream_proc = _run(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], root)
@@ -77,6 +81,10 @@ def _git_check(path: Path) -> dict:
         "examples": porcelain[:10],
         "detail": "Clean and synced." if ok else "Working tree or upstream state needs attention.",
     }
+
+
+def _is_runtime_state_path(path: str) -> bool:
+    return path == ".stepproof" or path.startswith(".stepproof/")
 
 
 def _resolve_repo_paths(path: Optional[str], repos: list[str]) -> list[Path]:
@@ -161,21 +169,27 @@ def _configured_eidos_marketplace_source(config_path: Path) -> Path | None:
         return None
 
     in_eidos_marketplace = False
+    source_type = ""
     for raw_line in config_path.read_text().splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
         if line.startswith("[") and line.endswith("]"):
             in_eidos_marketplace = line == "[marketplaces.eidos-agi]"
+            source_type = ""
             continue
-        if not in_eidos_marketplace or not line.startswith("source"):
+        if not in_eidos_marketplace:
             continue
         key, _, value = line.partition("=")
-        if key.strip() != "source":
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key == "source_type":
+            source_type = value
             continue
-        source = value.strip().strip('"').strip("'")
-        if source:
-            return Path(source).expanduser()
+        if key != "source":
+            continue
+        if value and source_type != "git" and "://" not in value and not value.startswith("git@"):
+            return Path(value).expanduser()
     return None
 
 

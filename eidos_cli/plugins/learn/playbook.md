@@ -36,6 +36,10 @@ when_to_fire:                  # required; 2-5 short conditions
 owner_forge: <one of: telos, research, governor, docket, praxis>
 required_evidence:             # required; what the verify step checks for
   - <relative path under draft/>
+faculty:                       # optional; only for subagent/judgment-mode plugins
+  role: <specialist role>
+  invoke_as: <short invocation name>
+  handoff: <what the substrate should ask this specialist to decide>
 ```
 
 ### `draft/playbook.md`

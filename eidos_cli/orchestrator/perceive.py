@@ -31,6 +31,7 @@ class TaskContext:
     guardrails: list[dict[str, Any]]
     recent_praxis_turns: list[dict[str, Any]]
     matched_plugins: list[dict[str, Any]]
+    recommended_faculties: list[dict[str, Any]]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -47,6 +48,7 @@ class TaskContext:
             "guardrails": self.guardrails,
             "recent_praxis_turns": self.recent_praxis_turns,
             "matched_plugins": self.matched_plugins,
+            "recommended_faculties": self.recommended_faculties,
         }
 
 
@@ -75,6 +77,7 @@ def perceive(eidos_home: Path, task_id: str) -> TaskContext:
         task_frontmatter=task_frontmatter,
         task_body=task_body,
     )
+    recommended_faculties = _recommended_faculties(matched_plugins)
 
     return TaskContext(
         eidos_home=eidos_home,
@@ -87,6 +90,7 @@ def perceive(eidos_home: Path, task_id: str) -> TaskContext:
         guardrails=guardrails,
         recent_praxis_turns=recent_turns,
         matched_plugins=matched_plugins,
+        recommended_faculties=recommended_faculties,
     )
 
 
@@ -257,9 +261,66 @@ def _match_plugins(
                     "description": p.description,
                     "required": is_required,
                     "match_reasons": reasons,
+                    "required_evidence": [
+                        str(e).strip()
+                        for e in (p.manifest.get("required_evidence") or [])
+                        if str(e).strip()
+                    ],
+                    "faculty": _normalize_faculty(
+                        p.manifest.get("faculty") or p.manifest.get("subagent")
+                    ),
                 }
             )
 
     # Stable ordering: required first, then by slug.
     matched.sort(key=lambda m: (not m["required"], m["slug"]))
     return matched
+
+
+def _normalize_faculty(value: Any) -> dict[str, Any] | None:
+    """Normalize optional plugin faculty/subagent metadata.
+
+    A plugin that wants to act as an Eidos-routable specialist may declare:
+
+    ``faculty: {role: ..., invoke_as: ..., handoff: ...}``
+
+    ``subagent`` is accepted as an alias because substrates often use that
+    word. Boolean/string values are intentionally not enough; Eidos needs
+    a role contract, not just a label.
+    """
+    if not isinstance(value, dict):
+        return None
+    role = str(value.get("role") or "").strip()
+    invoke_as = str(value.get("invoke_as") or value.get("name") or "").strip()
+    handoff = str(value.get("handoff") or "").strip()
+    if not role and not invoke_as and not handoff:
+        return None
+    return {
+        "role": role,
+        "invoke_as": invoke_as,
+        "handoff": handoff,
+    }
+
+
+def _recommended_faculties(
+    matched_plugins: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Promote matched faculty plugins into explicit specialist routes."""
+    recommendations: list[dict[str, Any]] = []
+    for plugin in matched_plugins:
+        faculty = plugin.get("faculty")
+        if not isinstance(faculty, dict):
+            continue
+        recommendations.append(
+            {
+                "slug": plugin["slug"],
+                "invoke_as": faculty.get("invoke_as") or plugin["slug"],
+                "role": faculty.get("role") or plugin.get("description", ""),
+                "required": plugin.get("required", False),
+                "handoff": faculty.get("handoff", ""),
+                "reasons": plugin.get("match_reasons", []),
+                "required_evidence": plugin.get("required_evidence", []),
+            }
+        )
+    recommendations.sort(key=lambda r: (not r["required"], r["slug"]))
+    return recommendations

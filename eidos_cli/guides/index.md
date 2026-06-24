@@ -54,6 +54,12 @@ That single verb walks THE-LOOP: PERCEIVE → CARDINALITY → emit context
 bundle → (substrate acts) → `eidos do --continue` → VERIFY → LEARN.
 The engine handles the structure; you handle the substance.
 
+When matched plugins declare `faculty` metadata, `eidos do` also emits
+`recommended_faculties`: the specialist/subagent to invoke, why it
+matched, the handoff it needs, and the evidence expected afterward.
+This is how Eidos makes a substrate smarter without absorbing every
+specialist runtime.
+
 ## AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE
 
 Eidos prefers agentic improvement over software production.
@@ -72,7 +78,9 @@ Every `eidos do` loop writes a praxis turn — what changed, why. The
 first-class `learn` command promotes a praxis turn into a reusable plugin,
 landing it in `~/.eidos/plugins/`. The *next* eidos's PERCEIVE phase
 matches that plugin against its task and attaches the playbook to the
-context bundle. **One eidos's learning becomes every eidos's reflex.**
+context bundle. When a plugin is also a faculty, the context bundle
+names the recommended specialist to invoke. **One eidos's learning
+becomes every eidos's reflex.**
 
 `converge` is the plugin to use when the loop needs measurable completion:
 target/probe rows, adapter evidence, drift checks, regression memory, row

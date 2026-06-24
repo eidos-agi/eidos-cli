@@ -222,6 +222,7 @@ def register(app: typer.Typer) -> None:
                 }
                 for pm in ctx.matched_plugins
             ],
+            "recommended_faculties": ctx.recommended_faculties,
             "next_step": (
                 f"Substrate reads context_bundle, writes plan to {plan_path}, "
                 f"performs ACT writing evidence into {evidence_dir}, then runs "
@@ -281,9 +282,24 @@ def register(app: typer.Typer) -> None:
                 for r in pm.get("match_reasons", []):
                     lines.append(f"      · {r}")
             lines.append(f"  playbooks copied to: {ctx_dir / 'plugins'}")
+        if ctx.recommended_faculties:
+            lines.append("")
+            lines.append(f"recommended faculties ({len(ctx.recommended_faculties)}):")
+            for faculty in ctx.recommended_faculties:
+                marker = "REQUIRED" if faculty.get("required") else "advisory"
+                lines.append(
+                    f"  - {faculty['invoke_as']:<32}  [{marker}] {faculty.get('role', '')}"
+                )
+                if faculty.get("handoff"):
+                    lines.append(f"      handoff: {faculty['handoff']}")
+                if faculty.get("required_evidence"):
+                    lines.append(
+                        "      evidence: "
+                        + ", ".join(str(e) for e in faculty["required_evidence"])
+                    )
         lines += [
             "",
-            "next: substrate reads the context bundle (+ matched plugins),",
+            "next: substrate reads the context bundle (+ matched plugins/faculties),",
             "      decomposes, plans, acts, writes the plan and evidence, then invokes:",
             f"      eidos do --continue {task_id} --evidence {evidence_dir}",
         ]

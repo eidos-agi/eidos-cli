@@ -16,6 +16,8 @@ structured bundle that downstream phases can classify against.
   outcome, path).
 - **Matched plugins** — from both stores (local + user-global), by four
   match paths. See `eidos guide loop perceive plugins-match`.
+- **Recommended faculties** — matched plugins that declare `faculty`
+  metadata, promoted into explicit subagent/specialist routes.
 
 ## The TaskContext
 
@@ -34,6 +36,7 @@ class TaskContext:
     guardrails: list[dict]
     recent_praxis_turns: list[dict]
     matched_plugins: list[dict]
+    recommended_faculties: list[dict]
 ```
 
 Written to disk as `.eidos/docket/contexts/<task-id>/context.json` for
@@ -49,3 +52,6 @@ the substrate to read.
   ≥40% of the when_to_fire entry's tokens). False positives cost more
   than false negatives — a missed plugin can be invoked explicitly via
   `eidos <plugin-alias>`.
+- It does not execute faculties. PERCEIVE only recommends which
+  specialist/subagent the substrate should invoke and what evidence the
+  checker should expect.

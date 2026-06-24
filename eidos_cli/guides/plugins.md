@@ -59,11 +59,26 @@ to every other eidos this user operates.
 ```
 <slug>/
   plugin.yaml      — slug, version, description, alias, when_to_fire,
-                     owner_forge, tags, required_evidence
+                     owner_forge, tags, required_evidence, faculty
   playbook.md      — substrate-readable procedure (the prompt)
   verify.py        — optional; verify(work_dir, draft_dir) → dict
   examples/        — optional sample inputs + outputs
 ```
+
+Optional `faculty` metadata turns a matched plugin into an explicit
+specialist recommendation for the substrate:
+
+```yaml
+faculty:
+  role: foresight research subagent
+  invoke_as: zoltar
+  handoff: decide what is likely to be regretted before ACT
+```
+
+Use `faculty` when the plugin represents a judgment mode or subagent,
+not merely a command. Eidos still does not perform the specialist work;
+it routes the substrate toward the right intelligence and preserves the
+evidence requirements.
 
 ## How `eidos do` reads them
 
@@ -78,6 +93,12 @@ PERCEIVE matches installed plugins against the task via four paths:
 Matched playbooks are copied into the context bundle under
 `contexts/<task-id>/plugins/<slug>.md` with a REQUIRED/advisory marker
 and the match reasons.
+
+If a matched plugin declares `faculty`, PERCEIVE also writes a
+`recommended_faculties` list into the context bundle and `eidos do
+--json` output. Each entry names the specialist to invoke, why it
+matched, what handoff it needs, and which evidence the checker should
+expect.
 
 ## Converge
 
