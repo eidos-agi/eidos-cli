@@ -66,6 +66,11 @@ refreshed from source.
 
 `eidos ship` is a one-shot shipment gate, not a repair loop. It can report what proof failed and what the agent should do next, but it does not spawn reviewers, run subagents, modify code, or recurse. Run any reviewer or repair agent outside `ship`, then rerun `ship` once to verify the result.
 
+External workflow CLIs such as Taskr or `skillflow_execute` are optional
+surfaces for this plugin unless they are installed and expose a live smoke
+command. Missing optional tools should be reported as warnings, then replaced
+with runnable Eidos gates: `eidos health`, `eidos ship`, and `eidos closeout`.
+
 ## Agentic-First Doctrine
 
 AGENTIC-FIRST SOFTWARE-SKEPTICAL DOCTRINE

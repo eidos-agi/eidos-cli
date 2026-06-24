@@ -59,6 +59,7 @@ Operationally:
 - Use `eidos do <task-id>` when the user is asking to work a docket task through the Eidos loop.
 - Use `eidos cleanup` when the user asks whether plugin/tool repos, local mirrors, or Codex cache copies are dirty, pushed, or portable to another Mac.
 - Use `eidos closeout` before claiming the mission is closed.
+- Treat missing non-Eidos workflow CLIs such as Taskr or `skillflow_execute` as optional-surface warnings, not Eidos blockers. Prefer runnable Eidos gates (`eidos health`, `eidos ship`, `eidos closeout`) until that external tool has a live smoke command.
 - Let Eidos identify the relevant domain or specialist.
 - Run that specialist CLI's smallest useful command.
 - Only use MCP when it is the pointer or bridge to a CLI, not as the primary place to model every capability.
