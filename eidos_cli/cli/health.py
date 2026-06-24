@@ -19,6 +19,7 @@ TASKR_COMMANDS = ("skillflow_execute", "taskr_triage", "taskr_governance_approve
 FACULTY_CANDIDATES = {
     "cept",
     "converge",
+    "eidos-skills-hub",
     "eidos-storemetheus",
     "felix",
     "foreman",

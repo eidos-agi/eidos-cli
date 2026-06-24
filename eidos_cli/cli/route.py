@@ -38,6 +38,10 @@ DOMAIN_BOOSTS: list[tuple[set[str], dict[str, int]]] = [
         {"eidos-plugin-store": 45, "felix": 22, "forge-forge": 18},
     ),
     (
+        {"skill", "skills", "skillflow", "skills-sh", "hub", "codex-skill", "codex-skills"},
+        {"eidos-skills-hub": 55, "forge-forge": 12, "eidos-plugin-store": 10},
+    ),
+    (
         {"ship", "shipping", "release", "publish", "deploy", "ci"},
         {"eidos-plugin-store": 24, "felix": 18, "converge": 18, "stepproof": 10},
     ),
@@ -70,6 +74,7 @@ DOMAIN_BOOSTS: list[tuple[set[str], dict[str, int]]] = [
 NEXT_COMMANDS = {
     "eidos": "eidos do <task-id>",
     "eidos-plugin-store": "curl -fsSL https://eidosagi.com/.well-known/eidos/capability-registry.json",
+    "eidos-skills-hub": "eidos plugin show eidos-skills-hub",
     "surfari": "surfari doctor",
     "stepproof": "stepproof audit verify",
     "converge": "eidos plugin show converge",

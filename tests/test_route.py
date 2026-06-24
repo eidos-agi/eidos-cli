@@ -10,8 +10,11 @@ def _registry_path() -> Path:
     repo_root = Path(__file__).resolve().parents[1]
     candidates = [
         repo_root.parent / "eidos-plugin-store" / "examples" / "capability-registry.sample.json",
+        repo_root.parent / "eidosagi.com" / "src" / "data" / "capability-registry.generated.json",
         Path("/Volumes/MacMiniStorage/Eidos/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+        Path("/Volumes/MacMiniStorage/Eidos/repos-eidos-agi/eidosagi.com/src/data/capability-registry.generated.json"),
         Path("/Users/dshanklin/repos-eidos-agi/eidos-plugin-store/examples/capability-registry.sample.json"),
+        Path("/Users/dshanklin/repos-eidos-agi/eidosagi.com/src/data/capability-registry.generated.json"),
     ]
     for candidate in candidates:
         if candidate.is_file():
@@ -58,6 +61,14 @@ def test_route_plugin_shipment_uses_catalog_and_builder_stack() -> None:
     assert "eidos-plugin-store" in route["specialist_stack"]
     assert "felix" in route["specialist_stack"]
     assert route["recommended_next_command"].startswith("curl -fsSL")
+
+
+def test_route_skill_discovery_uses_skills_hub() -> None:
+    route = _route("Find and apply the right Codex skill for a task")
+
+    assert route["specialist_stack"][0] == "eidos"
+    assert "eidos-skills-hub" in route["specialist_stack"]
+    assert route["recommended_next_command"] == "eidos plugin show eidos-skills-hub"
 
 
 def test_route_low_risk_docs_cleanup_stays_with_eidos() -> None:

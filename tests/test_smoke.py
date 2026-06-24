@@ -190,17 +190,17 @@ def test_faculty_check_warns_for_specialist_plugin_without_metadata(tmp_path: Pa
     from eidos_cli.plugin_runtime.store import PluginRef
 
     plugin = PluginRef(
-        slug="cept",
-        path=tmp_path / "cept",
+        slug="eidos-skills-hub",
+        path=tmp_path / "eidos-skills-hub",
         scope="global",
-        manifest={"slug": "cept", "description": "Agent proprioception"},
+        manifest={"slug": "eidos-skills-hub", "description": "Skill discovery"},
     )
 
     with patch("eidos_cli.plugin_runtime.store.list_plugins", return_value=[plugin]):
         check = health._faculty_check()
 
     assert check["status"] == "warn"
-    assert check["missing"][0]["slug"] == "cept"
+    assert check["missing"][0]["slug"] == "eidos-skills-hub"
 
 
 def test_define_refuses_existing_eidos(temp_eidos):
@@ -1808,15 +1808,16 @@ def test_perceive_recommends_faculty_from_matched_plugin(temp_eidos):
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
     faculties = payload.get("recommended_faculties") or []
-    assert len(faculties) == 1
-    assert faculties[0]["slug"] == "zoltar"
-    assert faculties[0]["invoke_as"] == "zoltar"
-    assert faculties[0]["role"] == "foresight research subagent"
-    assert faculties[0]["handoff"] == "decide what is likely to be regretted before ACT"
-    assert faculties[0]["required"] is False
-    assert faculties[0]["required_evidence"] == ["evidence_checked", "likely_user_complaint"]
-    assert "owner_forge match (research)" in faculties[0]["reasons"]
-    assert "tag overlap: ['foresight']" in faculties[0]["reasons"]
+    faculty_by_slug = {faculty["slug"]: faculty for faculty in faculties}
+    assert "zoltar" in faculty_by_slug
+    zoltar = faculty_by_slug["zoltar"]
+    assert zoltar["invoke_as"] == "zoltar"
+    assert zoltar["role"] == "foresight research subagent"
+    assert zoltar["handoff"] == "decide what is likely to be regretted before ACT"
+    assert zoltar["required"] is False
+    assert zoltar["required_evidence"] == ["evidence_checked", "likely_user_complaint"]
+    assert "owner_forge match (research)" in zoltar["reasons"]
+    assert "tag overlap: ['foresight']" in zoltar["reasons"]
     context = json.loads(Path(payload["context_bundle"]).read_text())
     assert context["recommended_faculties"] == faculties
 

@@ -44,6 +44,7 @@ PLUGINS:      eidos plugin list/install/run/show
               eidos <plugin-alias>   — top-level alias for an installed plugin
               eidos learn            — praxis-turn → plugin; status/verify/finish
               converge               — measurable completion / target rows / repair map
+              eidos-skills-hub       — skill discovery / skills.sh / Eidos skill hubs
 
 GUIDE:        eidos guide [topic]    — this manual, recursive drill-down
 ```
@@ -87,6 +88,10 @@ becomes every eidos's reflex.**
 target/probe rows, adapter evidence, drift checks, regression memory, row
 aggregation, and ranked repair targets. Eidos keeps the outer evidence loop;
 Converge supplies the target lattice and repair map.
+
+`eidos-skills-hub` is the plugin to use when the loop needs skill discovery:
+which Codex/Eidos skill applies, where it comes from, and how the substrate
+should load or install it before implementation.
 
 ## On-disk shape
 

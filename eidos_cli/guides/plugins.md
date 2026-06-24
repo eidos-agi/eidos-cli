@@ -120,3 +120,22 @@ Useful checks:
 eidos plugin show converge
 eidos plugin run converge
 ```
+
+## Eidos Skills Hub
+
+`eidos-skills-hub` is the installed plugin for skill discovery. Use it when a
+task depends on finding the right Codex skill, skills.sh entry, or first-party
+Eidos skill hub before implementation.
+
+The boundary is:
+
+- Eidos Skills Hub searches and identifies skill sources.
+- Codex reads and follows the selected skill.
+- Eidos preserves the outer evidence, continuation, learning, and closeout loop.
+
+Useful checks:
+
+```
+eidos plugin show eidos-skills-hub
+eidos route "find and apply the right Codex skill for a task"
+```
