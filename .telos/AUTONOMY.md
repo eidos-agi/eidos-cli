@@ -46,6 +46,14 @@ Format: `**Fork.** → Decision. _(why)_`
   routine (RemoteTrigger / claude.ai/code/routines), not `CronCreate`.
   _(session crons die with the session.)_
 
+## Refactoring / cleanup
+
+- **Is a reference to another eidos tool "rot" to remove?** → Rot = code that
+  *reaches into* a sibling (probes its state-dir, calls its tools) or prose
+  telling agents to. A stable field/column name that merely *contains* a forge
+  word (e.g. `source_research_id`) is **self** — keep it; renaming a serialized
+  field breaks the on-disk data format. _(settled by job #1, governor strip.)_
+
 ## Working style
 
 - **Should I suggest the human take a break / stop / wrap up / "call it"?** →
