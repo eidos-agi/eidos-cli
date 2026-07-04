@@ -1,0 +1,11 @@
+id: "ns_9a7f1093e775"
+project_id: "71d4adca-ec32-4649-961d-548138e01755"
+goal: "Eidos gets better at managing other AI jobs and AI systems — mission control for a fleet of agents: see, dispatch, steer, guard, verify, and remember across jobs, so more real external work ships with less human intervention."
+metric: "Autonomy: the weekly share of dispatched AI jobs that finish and verify with no human intervention, expressed as a percentage. A trajectory rising from near-zero — watch direction and drift, not a fixed target."
+stop_max_iters: null
+stop_zero_delta_n: 3
+signature: null
+created_at: "2026-07-04T07:37:07.096626+00:00"
+closed_at: null
+outcome: null
+repo_path: "/Users/dshanklinbv/repos-eidos-agi/eidos-cli"
