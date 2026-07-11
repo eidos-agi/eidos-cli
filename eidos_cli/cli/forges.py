@@ -27,6 +27,9 @@ def register(app: typer.Typer) -> None:
     try:
         from telos_md.cli import app as telos_app  # type: ignore
 
+        from . import telos_trilogy_pointer
+
+        telos_trilogy_pointer.patch(telos_app)
         app.add_typer(
             telos_app,
             name="telos",
