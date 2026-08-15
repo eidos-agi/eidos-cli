@@ -118,6 +118,7 @@ def _build_top_level_help() -> str:
             "  eidos vault     get | set | list | rm | keys ...",
             "  eidos health",
             "  eidos learn     --status | --continue | --finish",
+            "  eidos omni      [write] --tenant reeves   # four-field row on paired Omni",
             "",
             "MCP:",
             "  eidos mcp serve               # boots this MCP server (you're talking to it now)",

@@ -9,6 +9,7 @@ organized into:
   — direct access to the five forge libraries.
 - **Auth** (``eidos auth login / logout / status``) — platform credentials.
 - **Vault** (``eidos vault get / set / list / rm / keys``) — secrets.
+- **Omni** (``eidos omni [write]``) — four-field Redis row on the tenant's paired Omni.
 - **MCP** (``eidos mcp serve``) — boots the razor-thin MCP server.
 - **Migrate** (``eidos migrate``) — consolidates legacy
   ``.telos / .research / .governor / .docket / .hone`` directories into
