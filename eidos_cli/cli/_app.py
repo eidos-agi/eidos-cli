@@ -23,6 +23,7 @@ app = typer.Typer(
         "GUIDE:        eidos guide [topic [sub [...]]]              ← read this first\n"
         "AUTH:         eidos auth login | logout | status\n"
         "VAULT:        eidos vault get | set | list | rm | keys ...\n"
+        "OMNI:         eidos omni [write] --tenant reeves\n"
         "MCP:          eidos mcp serve\n"
         "MIGRATE:      eidos migrate\n"
         "\n"
@@ -88,6 +89,7 @@ def _wire() -> None:
     from . import learn as _learn_cmd
     from . import mcp as _mcp_cmd
     from . import migrate as _migrate_cmd
+    from . import omni as _omni_cmd
     from . import plugin as _plugin_cmd
     from . import route as _route_cmd
     from . import ship as _ship_cmd
@@ -106,6 +108,7 @@ def _wire() -> None:
     _spawn_cmd.register(app)
     _guide_cmd.register(app)
     _learn_cmd.register(app)
+    _omni_cmd.register(app)
 
     # Forge namespaces — direct access to the five forge libraries.
     _forges_cmd.register(app)
